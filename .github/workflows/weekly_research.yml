@@ -31,8 +31,6 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run weekly research
-        env:
-          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
         run: python research.py
 
       - name: Commit and push report

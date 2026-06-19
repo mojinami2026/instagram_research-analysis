@@ -1,13 +1,12 @@
-"""Weekly Instagram viral video research using Brave Search API (free tier)."""
+"""Weekly Instagram viral video research using DuckDuckGo (no API key required)."""
 
 import json
-import os
 import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import requests
+from duckduckgo_search import DDGS
 
 from config import (
     PERSONAL_BRAND_NICHES,
@@ -15,52 +14,31 @@ from config import (
     RESEARCH_QUERIES,
 )
 
-BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+
+def ddg_search(query: str, max_results: int = 10) -> list[dict]:
+    """Search DuckDuckGo and return a list of results."""
+    with DDGS() as ddgs:
+        results = list(ddgs.text(query, max_results=max_results, timelimit="m"))
+    return [
+        {
+            "title": r.get("title", ""),
+            "url": r.get("href", ""),
+            "description": r.get("body", ""),
+        }
+        for r in results
+    ]
 
 
-def brave_search(query: str, api_key: str, count: int = 10) -> list[dict]:
-    """Call Brave Search API and return a list of results."""
-    headers = {
-        "Accept": "application/json",
-        "Accept-Encoding": "gzip",
-        "X-Subscription-Token": api_key,
-    }
-    params = {
-        "q": query,
-        "count": count,
-        "freshness": "pw",  # past week
-        "text_decorations": False,
-        "search_lang": "en",
-        "country": "us",
-    }
-
-    response = requests.get(BRAVE_SEARCH_URL, headers=headers, params=params, timeout=15)
-    response.raise_for_status()
-    data = response.json()
-
-    results = []
-    for item in data.get("web", {}).get("results", []):
-        results.append(
-            {
-                "title": item.get("title", ""),
-                "url": item.get("url", ""),
-                "description": item.get("description", ""),
-                "age": item.get("age", ""),
-            }
-        )
-    return results
-
-
-def run_research(api_key: str) -> list[dict]:
-    """Run Brave searches for all research queries."""
+def run_research() -> list[dict]:
+    """Run DuckDuckGo searches for all research queries."""
     findings = []
 
-    print(f"Running {len(RESEARCH_QUERIES)} research queries via Brave Search...")
+    print(f"Running {len(RESEARCH_QUERIES)} research queries via DuckDuckGo...")
 
     for i, query in enumerate(RESEARCH_QUERIES, 1):
         print(f"  [{i}/{len(RESEARCH_QUERIES)}] Searching: {query}")
         try:
-            results = brave_search(query, api_key)
+            results = ddg_search(query)
             findings.append(
                 {
                     "query": query,
@@ -69,7 +47,7 @@ def run_research(api_key: str) -> list[dict]:
                     "timestamp": datetime.utcnow().isoformat(),
                 }
             )
-        except requests.HTTPError as e:
+        except Exception as e:
             print(f"    Warning: search failed ({e}), skipping.")
             findings.append(
                 {
@@ -81,9 +59,9 @@ def run_research(api_key: str) -> list[dict]:
                 }
             )
 
-        # Brave free tier: 1 request/second
+        # Polite delay to avoid rate limiting
         if i < len(RESEARCH_QUERIES):
-            time.sleep(1)
+            time.sleep(2)
 
     return findings
 
@@ -97,8 +75,7 @@ def format_results_section(finding: dict) -> str:
         return "\n".join(lines)
 
     for j, r in enumerate(finding["results"], 1):
-        age = f" _(published: {r['age']})_" if r.get("age") else ""
-        lines.append(f"**{j}. {r['title']}**{age}")
+        lines.append(f"**{j}. {r['title']}**")
         if r.get("description"):
             lines.append(f"> {r['description']}")
         lines.append(f"- {r['url']}")
@@ -186,12 +163,6 @@ def save_outputs(findings: list[dict], report: str, week_start: str) -> tuple[st
 
 
 def main():
-    api_key = os.environ.get("BRAVE_API_KEY")
-    if not api_key:
-        print("Error: BRAVE_API_KEY environment variable not set.", file=sys.stderr)
-        print("Get a free key at: https://brave.com/search/api/", file=sys.stderr)
-        sys.exit(1)
-
     today = datetime.utcnow().date()
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
@@ -200,7 +171,7 @@ def main():
 
     print(f"\n=== Instagram Viral Research: Week of {week_start_str} ===\n")
 
-    findings = run_research(api_key)
+    findings = run_research()
     report = build_report(findings, week_start_str, week_end_str)
     json_path, md_path = save_outputs(findings, report, week_start_str)
 
