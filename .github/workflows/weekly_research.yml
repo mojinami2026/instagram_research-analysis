@@ -32,7 +32,7 @@ jobs:
 
       - name: Run weekly research
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
         run: python research.py
 
       - name: Commit and push report

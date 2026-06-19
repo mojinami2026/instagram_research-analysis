@@ -1,124 +1,165 @@
-"""Weekly Instagram viral video research for personal brand niches."""
+"""Weekly Instagram viral video research using Brave Search API (free tier)."""
 
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import anthropic
+import requests
 
 from config import (
-    ANALYSIS_DIMENSIONS,
     PERSONAL_BRAND_NICHES,
     REPORT_OUTPUT_DIR,
     RESEARCH_QUERIES,
 )
 
-RESEARCH_SYSTEM_PROMPT = """You are an expert social media analyst specializing in Instagram content strategy and personal branding.
-
-Your task is to research and analyze viral Instagram videos in the personal brand niche. For each research query:
-1. Search for recent viral Instagram Reels and posts (past 7 days preferred, past 30 days acceptable)
-2. Identify patterns in hooks, formats, engagement tactics, and content themes
-3. Extract actionable insights for personal brand content creators
-
-Focus on:
-- Video hooks (first 3 seconds)
-- Content formats (talking head, b-roll, text overlay, carousel-style reels)
-- Engagement drivers (controversy, value, inspiration, entertainment)
-- Trending audio, sounds, or text styles
-- Caption and CTA patterns
-- Estimated reach/virality indicators
-
-Be specific, data-driven where possible, and focus on patterns that can be replicated."""
-
-SYNTHESIS_PROMPT = """Based on all the research above, create a comprehensive weekly report with:
-
-1. **TOP VIRAL PATTERNS THIS WEEK** — 5 most recurring patterns observed across all searches
-2. **WINNING HOOKS** — 10 specific hook formulas that appeared in viral content (with examples)
-3. **CONTENT FORMATS TRENDING** — Which video formats are performing best (ranked)
-4. **NICHE BREAKDOWN** — Key observations per personal brand sub-niche
-5. **ENGAGEMENT TACTICS** — 5 specific tactics driving comments and shares
-6. **ACTIONABLE RECOMMENDATIONS** — 7 concrete content ideas to create this week based on findings
-7. **WHAT TO AVOID** — 3 content patterns that are underperforming or oversaturated
-
-Format the output as a structured markdown report with clear headers and bullet points.
-Include a "WEEKLY SUMMARY" executive summary at the top (3-4 sentences).
-"""
+BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
 
 
-def run_research(client: anthropic.Anthropic) -> list[dict]:
-    """Run web searches for each research query and collect findings."""
+def brave_search(query: str, api_key: str, count: int = 10) -> list[dict]:
+    """Call Brave Search API and return a list of results."""
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": api_key,
+    }
+    params = {
+        "q": query,
+        "count": count,
+        "freshness": "pw",  # past week
+        "text_decorations": False,
+        "search_lang": "en",
+        "country": "us",
+    }
+
+    response = requests.get(BRAVE_SEARCH_URL, headers=headers, params=params, timeout=15)
+    response.raise_for_status()
+    data = response.json()
+
+    results = []
+    for item in data.get("web", {}).get("results", []):
+        results.append(
+            {
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "description": item.get("description", ""),
+                "age": item.get("age", ""),
+            }
+        )
+    return results
+
+
+def run_research(api_key: str) -> list[dict]:
+    """Run Brave searches for all research queries."""
     findings = []
 
-    print(f"Running {len(RESEARCH_QUERIES)} research queries...")
+    print(f"Running {len(RESEARCH_QUERIES)} research queries via Brave Search...")
 
     for i, query in enumerate(RESEARCH_QUERIES, 1):
         print(f"  [{i}/{len(RESEARCH_QUERIES)}] Searching: {query}")
-
-        response = client.messages.create(
-            model="claude-opus-4-8",
-            max_tokens=2000,
-            system=RESEARCH_SYSTEM_PROMPT,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            messages=[
+        try:
+            results = brave_search(query, api_key)
+            findings.append(
                 {
-                    "role": "user",
-                    "content": f"Research this query and provide detailed findings about viral Instagram content in the personal brand niche: '{query}'\n\nFor each viral video or content pattern you find, note: the hook, format, niche, engagement drivers, and what makes it shareable. Search for content from the past 7-30 days.",
+                    "query": query,
+                    "results": results,
+                    "result_count": len(results),
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
-            ],
-        )
+            )
+        except requests.HTTPError as e:
+            print(f"    Warning: search failed ({e}), skipping.")
+            findings.append(
+                {
+                    "query": query,
+                    "results": [],
+                    "result_count": 0,
+                    "error": str(e),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            )
 
-        result_text = ""
-        for block in response.content:
-            if hasattr(block, "text"):
-                result_text += block.text
-
-        findings.append(
-            {
-                "query": query,
-                "findings": result_text,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
-        )
+        # Brave free tier: 1 request/second
+        if i < len(RESEARCH_QUERIES):
+            time.sleep(1)
 
     return findings
 
 
-def synthesize_report(
-    client: anthropic.Anthropic, findings: list[dict], week_start: str, week_end: str
-) -> str:
-    """Synthesize all research findings into a weekly report."""
-    print("Synthesizing findings into weekly report...")
+def format_results_section(finding: dict) -> str:
+    """Format a single query's results as a markdown section."""
+    lines = [f"### Query: {finding['query']}\n"]
 
-    combined_findings = "\n\n---\n\n".join(
-        [f"## Research Query: {f['query']}\n\n{f['findings']}" for f in findings]
-    )
+    if not finding["results"]:
+        lines.append("_No results found or search failed._\n")
+        return "\n".join(lines)
 
-    messages = [
-        {
-            "role": "user",
-            "content": f"Here are the research findings from {len(findings)} searches about viral Instagram content in personal brand niches for the week of {week_start} to {week_end}:\n\n{combined_findings}",
-        },
-        {
-            "role": "assistant",
-            "content": "I've reviewed all the research findings. Now I'll synthesize these into a comprehensive weekly report.",
-        },
-        {"role": "user", "content": SYNTHESIS_PROMPT},
+    for j, r in enumerate(finding["results"], 1):
+        age = f" _(published: {r['age']})_" if r.get("age") else ""
+        lines.append(f"**{j}. {r['title']}**{age}")
+        if r.get("description"):
+            lines.append(f"> {r['description']}")
+        lines.append(f"- {r['url']}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def build_report(findings: list[dict], week_start: str, week_end: str) -> str:
+    """Build the full weekly markdown report from findings."""
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    total_results = sum(f["result_count"] for f in findings)
+
+    lines = [
+        f"# Instagram Viral Video Research — Week of {week_start}",
+        "",
+        f"_Generated: {generated_at} | Period: {week_start} → {week_end} | Total results: {total_results}_",
+        "",
+        "---",
+        "",
+        "## Overview",
+        "",
+        f"This report aggregates **{total_results} search results** across **{len(findings)} queries** "
+        f"targeting viral Instagram content in personal brand niches.",
+        "",
+        "**Niches covered:**",
     ]
 
-    response = client.messages.create(
-        model="claude-opus-4-8",
-        max_tokens=4000,
-        system=RESEARCH_SYSTEM_PROMPT,
-        messages=messages,
-    )
+    for niche in PERSONAL_BRAND_NICHES:
+        lines.append(f"- {niche}")
 
-    return response.content[0].text
+    lines += [
+        "",
+        "---",
+        "",
+        "## Search Results by Query",
+        "",
+    ]
+
+    for finding in findings:
+        lines.append(format_results_section(finding))
+        lines.append("---")
+        lines.append("")
+
+    lines += [
+        "## How to Use This Report",
+        "",
+        "1. **Review titles and descriptions** — look for recurring themes, formats, and hooks",
+        "2. **Visit the top URLs** — watch or read the content to study what made it viral",
+        "3. **Note patterns** — which niches appear most? What words recur in titles?",
+        "4. **Extract hooks** — copy exact phrasing from high-performing headlines as inspiration",
+        "5. **Create your content** — model your next Reel's structure on 2-3 viral examples",
+        "",
+        "_Re-run this script each Monday to get a fresh weekly snapshot._",
+    ]
+
+    return "\n".join(lines)
 
 
-def save_report(findings: list[dict], report: str, week_start: str) -> tuple[str, str]:
-    """Save the raw findings (JSON) and final report (Markdown)."""
+def save_outputs(findings: list[dict], report: str, week_start: str) -> tuple[str, str]:
+    """Save raw JSON findings and the markdown report."""
     output_dir = Path(REPORT_OUTPUT_DIR)
     output_dir.mkdir(exist_ok=True)
 
@@ -139,19 +180,17 @@ def save_report(findings: list[dict], report: str, week_start: str) -> tuple[str
     )
 
     md_path = output_dir / f"weekly_report_{date_slug}.md"
-    header = f"# Instagram Viral Video Research — Week of {week_start}\n\n_Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}_\n\n---\n\n"
-    md_path.write_text(header + report)
+    md_path.write_text(report)
 
     return str(json_path), str(md_path)
 
 
 def main():
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("BRAVE_API_KEY")
     if not api_key:
-        print("Error: ANTHROPIC_API_KEY environment variable not set.", file=sys.stderr)
+        print("Error: BRAVE_API_KEY environment variable not set.", file=sys.stderr)
+        print("Get a free key at: https://brave.com/search/api/", file=sys.stderr)
         sys.exit(1)
-
-    client = anthropic.Anthropic(api_key=api_key)
 
     today = datetime.utcnow().date()
     week_start = today - timedelta(days=today.weekday())
@@ -161,15 +200,13 @@ def main():
 
     print(f"\n=== Instagram Viral Research: Week of {week_start_str} ===\n")
 
-    findings = run_research(client)
-    report = synthesize_report(client, findings, week_start_str, week_end_str)
-    json_path, md_path = save_report(findings, report, week_start_str)
+    findings = run_research(api_key)
+    report = build_report(findings, week_start_str, week_end_str)
+    json_path, md_path = save_outputs(findings, report, week_start_str)
 
     print(f"\n=== Research Complete ===")
-    print(f"Raw findings saved to: {json_path}")
-    print(f"Weekly report saved to: {md_path}")
-    print("\n--- REPORT PREVIEW (first 500 chars) ---")
-    print(report[:500] + "...")
+    print(f"Raw findings : {json_path}")
+    print(f"Weekly report: {md_path}")
 
 
 if __name__ == "__main__":
