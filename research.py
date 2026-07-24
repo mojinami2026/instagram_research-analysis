@@ -1,7 +1,12 @@
-"""Weekly Instagram viral video research using DuckDuckGo (no API key required)."""
+"""Weekly Instagram content research using DuckDuckGo (no API key required).
+
+Runs two tracks:
+  1. Viral content research — study hooks/formats in the account's niches.
+  2. Hot-take research — trending news & culture topics to react to with an
+     opinionated "angry breakdown" commentary style.
+"""
 
 import json
-import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -9,16 +14,22 @@ from pathlib import Path
 from duckduckgo_search import DDGS
 
 from config import (
-    PERSONAL_BRAND_NICHES,
+    HOT_TAKE_ANGLES,
+    HOT_TAKE_QUERIES,
+    NICHES,
     REPORT_OUTPUT_DIR,
-    RESEARCH_QUERIES,
+    VIRAL_QUERIES,
 )
 
 
-def ddg_search(query: str, max_results: int = 10) -> list[dict]:
-    """Search DuckDuckGo and return a list of results."""
+def ddg_search(query: str, max_results: int = 10, timelimit: str = "m") -> list[dict]:
+    """Search DuckDuckGo and return a list of results.
+
+    timelimit: 'd' day, 'w' week, 'm' month — hot takes use a tighter window
+    so topics are actually current.
+    """
     with DDGS() as ddgs:
-        results = list(ddgs.text(query, max_results=max_results, timelimit="m"))
+        results = list(ddgs.text(query, max_results=max_results, timelimit=timelimit))
     return [
         {
             "title": r.get("title", ""),
@@ -29,18 +40,18 @@ def ddg_search(query: str, max_results: int = 10) -> list[dict]:
     ]
 
 
-def run_research() -> list[dict]:
-    """Run DuckDuckGo searches for all research queries."""
+def run_queries(queries: list[str], label: str, timelimit: str) -> list[dict]:
+    """Run a list of queries and collect findings."""
     findings = []
+    print(f"Running {len(queries)} {label} queries via DuckDuckGo...")
 
-    print(f"Running {len(RESEARCH_QUERIES)} research queries via DuckDuckGo...")
-
-    for i, query in enumerate(RESEARCH_QUERIES, 1):
-        print(f"  [{i}/{len(RESEARCH_QUERIES)}] Searching: {query}")
+    for i, query in enumerate(queries, 1):
+        print(f"  [{i}/{len(queries)}] {label}: {query}")
         try:
-            results = ddg_search(query)
+            results = ddg_search(query, timelimit=timelimit)
             findings.append(
                 {
+                    "track": label,
                     "query": query,
                     "results": results,
                     "result_count": len(results),
@@ -51,6 +62,7 @@ def run_research() -> list[dict]:
             print(f"    Warning: search failed ({e}), skipping.")
             findings.append(
                 {
+                    "track": label,
                     "query": query,
                     "results": [],
                     "result_count": 0,
@@ -59,16 +71,15 @@ def run_research() -> list[dict]:
                 }
             )
 
-        # Polite delay to avoid rate limiting
-        if i < len(RESEARCH_QUERIES):
-            time.sleep(2)
+        if i < len(queries):
+            time.sleep(2)  # polite delay to avoid rate limiting
 
     return findings
 
 
 def format_results_section(finding: dict) -> str:
     """Format a single query's results as a markdown section."""
-    lines = [f"### Query: {finding['query']}\n"]
+    lines = [f"### {finding['query']}\n"]
 
     if not finding["results"]:
         lines.append("_No results found or search failed._\n")
@@ -84,38 +95,56 @@ def format_results_section(finding: dict) -> str:
     return "\n".join(lines)
 
 
-def build_report(findings: list[dict], week_start: str, week_end: str) -> str:
-    """Build the full weekly markdown report from findings."""
+def build_report(
+    viral: list[dict], hot: list[dict], week_start: str, week_end: str
+) -> str:
+    """Build the full two-track weekly markdown report."""
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-    total_results = sum(f["result_count"] for f in findings)
+    total = sum(f["result_count"] for f in viral + hot)
 
     lines = [
-        f"# Instagram Viral Video Research — Week of {week_start}",
+        f"# Instagram Content Research — Week of {week_start}",
         "",
-        f"_Generated: {generated_at} | Period: {week_start} → {week_end} | Total results: {total_results}_",
+        f"_Generated: {generated_at} | Period: {week_start} → {week_end} | "
+        f"Total results: {total}_",
         "",
         "---",
         "",
         "## Overview",
         "",
-        f"This report aggregates **{total_results} search results** across **{len(findings)} queries** "
-        f"targeting viral Instagram content in personal brand niches.",
+        f"Two research tracks across **{len(viral) + len(hot)} queries**:",
+        "",
+        "1. **Viral content** — hooks & formats working right now in your niches.",
+        "2. **Hot takes** — trending topics to react to with your opinionated "
+        "\"angry breakdown\" commentary style.",
         "",
         "**Niches covered:**",
     ]
-
-    for niche in PERSONAL_BRAND_NICHES:
+    for niche in NICHES:
         lines.append(f"- {niche}")
 
+    # Track 1
+    lines += ["", "---", "", "## 🔥 Track 1 — Viral Content (hooks & formats)", ""]
+    for finding in viral:
+        lines.append(format_results_section(finding))
+        lines.append("---")
+        lines.append("")
+
+    # Track 2
     lines += [
         "",
-        "---",
+        "## 🎙️ Track 2 — Hot Takes (topics to react to)",
         "",
-        "## Search Results by Query",
+        "Scan these for a story that makes you genuinely react. The strongest "
+        "commentary videos pair a *current* topic with a *strong angle*.",
         "",
+        "**Angles that reliably land:**",
     ]
+    for angle in HOT_TAKE_ANGLES:
+        lines.append(f"- {angle}")
+    lines.append("")
 
-    for finding in findings:
+    for finding in hot:
         lines.append(format_results_section(finding))
         lines.append("---")
         lines.append("")
@@ -123,19 +152,24 @@ def build_report(findings: list[dict], week_start: str, week_end: str) -> str:
     lines += [
         "## How to Use This Report",
         "",
-        "1. **Review titles and descriptions** — look for recurring themes, formats, and hooks",
-        "2. **Visit the top URLs** — watch or read the content to study what made it viral",
-        "3. **Note patterns** — which niches appear most? What words recur in titles?",
-        "4. **Extract hooks** — copy exact phrasing from high-performing headlines as inspiration",
-        "5. **Create your content** — model your next Reel's structure on 2-3 viral examples",
+        "**For viral content (Track 1):** study the hooks and formats — copy "
+        "exact phrasing from high-performing headlines, note which formats recur, "
+        "and model your next Reel on 2-3 examples.",
         "",
-        "_Re-run this script each Monday to get a fresh weekly snapshot._",
+        "**For hot takes (Track 2):** pick ONE topic that makes you react, choose "
+        "an angle from the list above, and open with your take in the first 2 "
+        "seconds (\"Can we talk about...\", \"Unpopular opinion:...\"). Strong "
+        "opinion + current topic = comments = reach.",
+        "",
+        "_Re-run each Monday for a fresh weekly snapshot._",
     ]
 
     return "\n".join(lines)
 
 
-def save_outputs(findings: list[dict], report: str, week_start: str) -> tuple[str, str]:
+def save_outputs(
+    viral: list[dict], hot: list[dict], report: str, week_start: str
+) -> tuple[str, str]:
     """Save raw JSON findings and the markdown report."""
     output_dir = Path(REPORT_OUTPUT_DIR)
     output_dir.mkdir(exist_ok=True)
@@ -148,9 +182,11 @@ def save_outputs(findings: list[dict], report: str, week_start: str) -> tuple[st
             {
                 "week_start": week_start,
                 "generated_at": datetime.utcnow().isoformat(),
-                "niches_researched": PERSONAL_BRAND_NICHES,
-                "queries": RESEARCH_QUERIES,
-                "findings": findings,
+                "niches_researched": NICHES,
+                "viral_queries": VIRAL_QUERIES,
+                "hot_take_queries": HOT_TAKE_QUERIES,
+                "viral_findings": viral,
+                "hot_take_findings": hot,
             },
             indent=2,
         )
@@ -169,13 +205,15 @@ def main():
     week_start_str = str(week_start)
     week_end_str = str(week_end)
 
-    print(f"\n=== Instagram Viral Research: Week of {week_start_str} ===\n")
+    print(f"\n=== Instagram Content Research: Week of {week_start_str} ===\n")
 
-    findings = run_research()
-    report = build_report(findings, week_start_str, week_end_str)
-    json_path, md_path = save_outputs(findings, report, week_start_str)
+    viral = run_queries(VIRAL_QUERIES, "viral", timelimit="m")
+    hot = run_queries(HOT_TAKE_QUERIES, "hot-take", timelimit="w")
 
-    print(f"\n=== Research Complete ===")
+    report = build_report(viral, hot, week_start_str, week_end_str)
+    json_path, md_path = save_outputs(viral, hot, report, week_start_str)
+
+    print("\n=== Research Complete ===")
     print(f"Raw findings : {json_path}")
     print(f"Weekly report: {md_path}")
 
