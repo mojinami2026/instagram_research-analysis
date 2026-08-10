@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Is This Networking or Flirting?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>💼</text></svg>">
+<style>
+  .split { display:flex; height:34px; border:3px solid var(--chrome-3); border-radius:999px; overflow:hidden; background:#fff; margin:14px 0 4px; }
+  .split i { display:block; height:100%; transition:width 1s cubic-bezier(.2,.9,.2,1); position:relative; }
+  .split .biz { background:repeating-linear-gradient(90deg,#2a9dff 0 12px,#7cc8ff 12px 24px); }
+  .split .flirt { background:repeating-linear-gradient(90deg,var(--hotpink) 0 12px,#ffa6dd 12px 24px); }
+  .splitlbl { display:flex; justify-content:space-between; font-size:12.5px; opacity:.85; font-weight:700; }
+  .hits { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .hits span { font-size:12.5px; background:#fff; border:2px solid var(--lilac); border-radius:999px; padding:3px 9px; }
+  .hits span.f { border-color:var(--hotpink); }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+(function () {
+  var FLIRT = [
+    [/\b(drinks?|wine|cocktails?)\b/gi, 2.2, 'proposed alcohol'],
+    [/\b(dinner)\b/gi, 2.4, 'said "dinner", not "lunch"'],
+    [/\b(you look|you looked|that dress|that suit|handsome|gorgeous|cute|hot)\b/gi, 4.5, 'commented on your appearance'],
+    [/\b(miss(ed)? you|thinking (about|of) you)\b/gi, 4.5, 'used "miss you" in a professional context'],
+    [/\b(just us|the two of us|alone|one on one|1:1 but fun)\b/gi, 3.2, 'specified that others would not be there'],
+    [/(😉|😘|😍|🥰|❤️|😏|🔥|👀|💋)/g, 3.0, 'deployed a non-business emoji'],
+    [/\b(haha+|lol|lmao)\b/gi, 1.1, 'laughed at something that was not funny'],
+    [/\b(late|tonight|this weekend|saturday|sunday)\b/gi, 2.0, 'suggested a time outside business hours'],
+    [/\b(my place|your place|hotel|airbnb)\b/gi, 5.0, 'mentioned a residence'],
+    [/\b(single|dating|girlfriend|boyfriend|partner|divorce)\b/gi, 4.2, 'established relationship status unprompted'],
+    [/!{2,}/g, 1.2, 'multiple exclamation points'],
+    [/\b(fun|adventure|trouble|dangerous)\b/gi, 1.3, 'described the plan as "fun"']
+  ];
+  var BIZ = [
+    [/\b(role|position|headcount|req|opening)\b/gi, 3.0, 'referenced an open role'],
+    [/\b(intro(duce|duction)?|connect you|put you in touch|referral)\b/gi, 3.2, 'offered an introduction'],
+    [/\b(deck|proposal|contract|invoice|scope|budget|sow)\b/gi, 3.6, 'mentioned documents'],
+    [/\b(team|org|company|quarter|q[1-4]|roadmap|okrs?)\b/gi, 2.2, 'used org vocabulary'],
+    [/\b(coffee|lunch|quick (call|chat)|15 (min|minutes)|30 (min|minutes)|zoom|calendly|calendar)\b/gi, 2.4, 'proposed a bounded daytime meeting'],
+    [/\b(resume|cv|portfolio|linkedin|referred)\b/gi, 3.0, 'career-document energy'],
+    [/\b(circle back|touch base|sync|follow up|loop in|bandwidth)\b/gi, 2.6, 'spoke fluent corporate'],
+    [/\b(cc(ing)?|thread|forward(ed|ing)?|attached)\b/gi, 3.4, 'involved other people in writing'],
+    [/\b(best|regards|thanks so much|cheers,)\b/gi, 1.6, 'used a sign-off'],
+    [/\b(office|conference|panel|summit|booth|keynote)\b/gi, 2.2, 'a venue with a lanyard']
+  ];
+
+  function scan(text, table) {
+    var pts = 0, found = [];
+    table.forEach(function (row) {
+      var m = text.match(row[0]);
+      if (m) { pts += row[1] * Math.min(m.length, 3); found.push(row[2] + ' ×' + m.length); }
+    });
+    return { pts: pts, found: found };
+  }
+
+  Y2K.app({
+    title: 'Is This Networking or Flirting?',
+    emoji: '💼💋',
+    file: 'ambiguity_engine',
+    sub: 'Paste the messages. We produce a <em>dangerously confident verdict</em> you should absolutely not act on without further evidence.',
+    intro: 'Text is analyzed locally with regular expressions, which is the exact level of rigor this question deserves.',
+    button: '✧ DELIVER THE VERDICT ✧',
+    meterLabel: '0 = purely professional · 100 = you both know',
+    loaderLines: ['TOKENIZING PLAUSIBLE DENIABILITY ...', 'SCANNING FOR THE WORD "DRINKS" ...', 'WEIGHING EMOJI AGAINST CALENDAR INVITES ...'],
+    ticker: 'we have never been wrong. we have also never been checked.',
+
+    fields: [
+      { id: 'msgs', type: 'textarea', label: 'Paste the messages',
+        hint: 'Copy the whole thread if you can — their messages matter more than yours, but paste both.',
+        placeholder: 'them: hey! loved your talk today\nthem: we should grab drinks and talk about the role 😉\nyou: haha sure! when works?\nthem: friday late?' },
+      { id: 'who', type: 'choice', label: 'Who sent the last message?',
+        options: [{ v: 2, label: 'them' }, { v: 0, label: 'me' }], default: 2 },
+      { id: 'hour', type: 'choice', label: 'When do they usually message?',
+        options: [
+          { v: 0, label: '☀️ 9–5, weekdays only' },
+          { v: 2, label: '🌆 evenings, sometimes' },
+          { v: 4, label: '🌙 after 10pm' },
+          { v: 5, label: '🍷 after 10pm, on weekends' }
+        ], default: 2 },
+      { id: 'speed', type: 'slider', min: 0, max: 10, default: 5,
+        label: 'How fast do they reply to you compared to normal work messages?',
+        ticks: ['3 business days', 'before I finish typing'] },
+      { id: 'len', type: 'slider', min: 0, max: 10, default: 5,
+        label: 'Their message length vs. what the topic actually requires',
+        ticks: ['terse', 'novelistic'] },
+      { id: 'power', type: 'choice', label: 'Professional power dynamic',
+        options: [
+          { v: 0, label: 'peers, no stakes' },
+          { v: 1, label: 'they might hire/pay me' },
+          { v: 2, label: 'I might hire/pay them' },
+          { v: 3, label: 'one of us reports to the other' }
+        ], default: 0 },
+      { id: 'ctx', type: 'checks', label: 'Also true:',
+        options: [
+          { v: 'noagenda', label: 'The meeting keeps getting scheduled but never has an agenda' },
+          { v: 'moved', label: 'They moved it from coffee to drinks' },
+          { v: 'personal', label: 'They switched from work email to a personal channel' },
+          { v: 'noone', label: 'Nobody else from either company is ever included' },
+          { v: 'lifeadvice', label: 'The conversation drifts to your personal life every time' },
+          { v: 'actualhelp', label: 'They have actually done a concrete professional favor for you' },
+          { v: 'partner', label: 'They mention their partner naturally and often' }
+        ] }
+    ],
+
+    compute: function (v) {
+      var text = (v.msgs || '').trim();
+      if (text.length < 20) {
+        return { score: 50, scoreText: '???', vibe: 'mid', title: 'Paste the actual messages, coward',
+          blurb: 'You came to a text-analysis website and did not bring text. Bold.',
+          advice: 'Copy the thread. We promise it stays in your browser.' };
+      }
+      var f = scan(text, FLIRT), b = scan(text, BIZ);
+      var ctx = v.ctx || [];
+
+      var flirt = f.pts + v.hour * 1.6 + (v.speed - 5) * 1.5 + (v.len - 5) * 1.1 + v.who * 1.5;
+      var biz = b.pts + (v.power >= 1 ? 4 : 0) + 6;
+      if (ctx.indexOf('noagenda') > -1) flirt += 6;
+      if (ctx.indexOf('moved') > -1) flirt += 7;
+      if (ctx.indexOf('personal') > -1) flirt += 6;
+      if (ctx.indexOf('noone') > -1) flirt += 5;
+      if (ctx.indexOf('lifeadvice') > -1) flirt += 5;
+      if (ctx.indexOf('actualhelp') > -1) biz += 9;
+      if (ctx.indexOf('partner') > -1) biz += 6;
+
+      var total = flirt + biz;
+      var score = Y2K.clamp((flirt / total) * 100, 3, 97);
+      var vibe = score > 62 ? 'bad' : score > 40 ? 'mid' : 'good';
+
+      var titles = [
+        'This is networking. Genuinely. Relax.',
+        'Networking, with a friendly tone. You are reading tea leaves.',
+        'Ambiguous by design — possibly on purpose.',
+        'This is flirting with a business alibi.',
+        'This is flirting. The business part is the costume.'
+      ];
+
+      var receipts = [];
+      if (f.found.length) receipts.push({ vibe: 'bad', t: '<b>Flirt signals detected:</b> ' + Y2K.esc(f.found.join(' · ')) });
+      if (b.found.length) receipts.push({ vibe: 'good', t: '<b>Business signals detected:</b> ' + Y2K.esc(b.found.join(' · ')) });
+      receipts.push({ vibe: v.speed >= 7 ? 'bad' : 'mid',
+        t: 'Reply speed vs. their professional baseline: <b>' + v.speed + '/10</b>. ' +
+           (v.speed >= 7 ? 'Nobody answers a vendor that fast.' : 'Normal-person latency. No signal here.') });
+      receipts.push({ vibe: v.hour >= 4 ? 'bad' : 'good',
+        t: v.hour >= 4 ? 'Messages arrive after 10pm. Work does not happen after 10pm; work is an excuse that happens after 10pm.'
+                       : 'Messaging stays inside business hours, which is the most boring and most reassuring data point available.' });
+      if (v.power >= 1) receipts.push({ vibe: 'bad',
+        t: '⚠️ There is a real power dynamic here. Whatever the answer, the ambiguity is more expensive for whoever has less power — and that is worth naming before drinks, not after.' });
+      if (ctx.indexOf('noagenda') > -1) receipts.push({ vibe: 'bad', t: 'A recurring meeting with no agenda is not a meeting. It is a standing date with expense-report privileges.' });
+      if (ctx.indexOf('actualhelp') > -1) receipts.push({ vibe: 'good', t: 'They did a concrete professional favor. People who are only flirting rarely do unglamorous work for you.' });
+      if (ctx.indexOf('partner') > -1) receipts.push({ vibe: 'good', t: 'They mention their partner naturally. That is usually a sincere signal, not a decoy.' });
+
+      var splitHTML =
+        '<div class="subhead">⚖ the split</div>' +
+        '<div class="split"><i class="biz" style="width:' + (100 - score) + '%"></i><i class="flirt" style="width:' + score + '%"></i></div>' +
+        '<div class="splitlbl"><span>💼 business ' + Math.round(100 - score) + '%</span><span>' + Math.round(score) + '% flirting 💋</span></div>' +
+        '<div class="hits">' + f.found.map(function (x) { return '<span class="f">' + Y2K.esc(x) + '</span>'; }).join('') +
+        b.found.map(function (x) { return '<span>' + Y2K.esc(x) + '</span>'; }).join('') + '</div>';
+
+      return {
+        score: score, vibe: vibe, title: Y2K.pick(titles, score),
+        blurb: score > 62
+          ? 'The language is doing two jobs and only one of them is on the invoice. The word choices, timing, and venue drift all point the same direction.'
+          : score > 40
+            ? 'Genuinely 50/50, which usually means the other person has not decided either. Ambiguity this clean is often unconscious.'
+            : 'Warm professional tone reads as flirting when you want it to. The actual markers are overwhelmingly business.',
+        stats: [
+          { k: 'flirt points', v: Math.round(flirt) },
+          { k: 'business points', v: Math.round(biz) },
+          { k: 'confidence', v: (Math.abs(score - 50) > 22 ? 'high' : 'dangerous') },
+          { k: 'words scanned', v: text.split(/\s+/).length }
+        ],
+        receipts: receipts,
+        extra: splitHTML,
+        advice: score > 62
+          ? 'Propose 11am coffee at their office. The response to that single message will tell you more than this entire website did.'
+          : score > 40
+            ? 'Send the daytime version of the plan and watch what happens to their enthusiasm. Ambiguity survives vagueness; it does not survive a calendar invite.'
+            : 'Go to the meeting. Bring questions. You are allowed to have a nice professional friendship.'
+      };
+    }
+  });
+})();
+</script>
+</body>
+</html>

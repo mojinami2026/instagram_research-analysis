@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Is Buying a House Actually My Dream — or My Parents'?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🏡</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: "Is Buying a House Actually My Dream — or My Parents'?",
+  emoji: '🏡👻',
+  file: 'generational_audit',
+  sub: 'Separates genuine preference from inherited script — the <em>generational propaganda</em> you absorbed before you could evaluate it.',
+  intro: 'Their advice was correct. For their decade. That is the whole problem — nothing about it was wrong when they learned it.',
+  button: '✧ AUDIT MY DREAM ✧',
+  meterLabel: 'authenticity — how much of this wanting is yours',
+  loaderLines: ['SEPARATING SIGNAL FROM SUNDAY LUNCH ...', 'ADJUSTING 1987 ADVICE FOR INFLATION ...', 'ASKING WHAT YOU WOULD WANT IF NOBODY KNEW ...'],
+  ticker: 'your parents bought at 3x income. you are looking at 9x. same advice, different planet.',
+
+  fields: [
+    { id: 'why', type: 'checks', label: 'Why do you want to buy? Tick everything that applies.',
+      options: [
+        { v: 'stable', label: 'I want to stop moving / landlord risk' },
+        { v: 'paint', label: 'I want to change things — walls, kitchen, a dog' },
+        { v: 'invest', label: 'It is the smart financial move' },
+        { v: 'behind', label: 'Everyone my age is doing it' },
+        { v: 'parents', label: 'My parents bring it up' },
+        { v: 'adult', label: 'It would make me feel like a real adult' },
+        { v: 'kids', label: 'Kids / family plans' },
+        { v: 'love', label: 'I have a specific place and area I genuinely love' }
+      ] },
+    { id: 'freq', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How often do your parents mention property?', ticks: ['never', 'every single call'] },
+    { id: 'era', type: 'choice', label: 'When your parents bought, the price was roughly:',
+      options: [
+        { v: 3, label: '2–3× their annual income' }, { v: 2, label: '4–5×' },
+        { v: 1, label: '6×+' }, { v: 0, label: 'they never bought' }
+      ], default: 3 },
+    { id: 'mine', type: 'choice', label: 'In your market, a home you would want costs:',
+      options: [
+        { v: 0, label: '3–4× my income' }, { v: 1, label: '5–7×' },
+        { v: 2, label: '8–10×' }, { v: 3, label: '11×+ / not happening' }
+      ], default: 2 },
+    { id: 'stay', type: 'choice', label: 'How long will you realistically stay in one city?',
+      options: [
+        { v: 0, label: 'under 3 years' }, { v: 1, label: '3–6 years' },
+        { v: 2, label: '7–10 years' }, { v: 3, label: 'this is home, permanently' }
+      ], default: 1 },
+    { id: 'deposit', type: 'slider', min: 0, max: 100, step: 5, default: 30,
+      label: 'How much of your deposit would come from family?', ticks: ['0% — all mine', '100% — all them'] },
+    { id: 'alt', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'If money were identical either way, how much would you WANT to own?',
+      hint: 'Same cost, same security. Just the owning itself.', ticks: ['not at all', 'desperately'] },
+    { id: 'secret', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'If nobody ever found out, how happy would renting forever make you?',
+      ticks: ['miserable', 'completely content'] },
+    { id: 'guilt', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much guilt/failure do you feel about not owning?', ticks: ['none', 'constant' ] }
+  ],
+
+  compute: function (v) {
+    var w = v.why || [];
+    var intrinsic = 0, extrinsic = 0;
+    if (w.indexOf('stable') > -1) intrinsic += 9;
+    if (w.indexOf('paint') > -1) intrinsic += 10;
+    if (w.indexOf('love') > -1) intrinsic += 12;
+    if (w.indexOf('kids') > -1) intrinsic += 7;
+    if (w.indexOf('invest') > -1) extrinsic += 5;
+    if (w.indexOf('behind') > -1) extrinsic += 12;
+    if (w.indexOf('parents') > -1) extrinsic += 12;
+    if (w.indexOf('adult') > -1) extrinsic += 11;
+
+    intrinsic += v.alt * 3.2 + (10 - v.secret) * 1.6;
+    extrinsic += v.freq * 2.4 + v.guilt * 2.8 + v.deposit * 0.12;
+
+    var authenticity = Y2K.clamp((intrinsic / Math.max(1, intrinsic + extrinsic)) * 100, 3, 97);
+    var vibe = authenticity >= 62 ? 'good' : authenticity >= 40 ? 'mid' : 'bad';
+
+    var eraGap = (v.mine - (3 - v.era));
+    var fitScore = Y2K.clamp(60 + v.stay * 12 - v.mine * 9, 0, 100);
+
+    var receipts = [
+      { vibe: v.secret >= 7 ? 'bad' : 'good',
+        t: 'If nobody ever found out, renting forever scores <b>' + v.secret + '/10</b> for contentment. ' +
+           (v.secret >= 7 ? 'This is the most revealing answer on the page. A desire that evaporates the moment the audience does was never entirely yours.'
+                          : 'Even unobserved, you want it. That is a real preference, not a performance.') },
+      { vibe: v.alt >= 7 ? 'good' : 'mid',
+        t: 'With money held constant, your desire to own is <b>' + v.alt + '/10</b>. ' +
+           (v.alt >= 7 ? 'You want the thing itself — the walls, the permanence, the right to knock through. That is intrinsic and it does not need defending.'
+                       : 'Once you strip out the financial argument, the wanting mostly disappears. Worth noticing before a 30-year commitment.') },
+      { vibe: eraGap > 1 ? 'bad' : 'mid',
+        t: 'Your parents bought at roughly <b>' + ['never','6×+','4–5×','2–3×'][v.era] + '</b> income. You are looking at <b>' +
+           ['3–4×','5–7×','8–10×','11×+'][v.mine] + '</b>. ' +
+           (eraGap > 1 ? 'Their advice was rational arithmetic in their decade. Repeating it in yours is not advice, it is nostalgia with a mortgage attached — and they usually do not know that.' : 'Comparable ratios. Their advice roughly still applies.') },
+      { vibe: v.stay >= 2 ? 'good' : 'bad',
+        t: 'You expect to stay <b>' + ['under 3 years','3–6 years','7–10 years','permanently'][v.stay] + '</b>. ' +
+           (v.stay <= 1 ? 'Under about five years, transaction costs typically eat the appreciation. Buying is not a financial decision on that timeline, it is a lifestyle one — which is fine, but name it correctly.'
+                        : 'Long enough for ownership to make financial sense on its own terms.') },
+      { vibe: v.guilt >= 7 ? 'bad' : 'good',
+        t: 'Guilt about not owning: <b>' + v.guilt + '/10</b>. ' +
+           (v.guilt >= 7 ? 'Guilt is the fingerprint of an inherited script. Genuine desires feel like wanting; inherited ones feel like being behind.' : 'Low guilt. You are choosing, not complying.') },
+      { vibe: v.deposit > 50 ? 'mid' : 'good',
+        t: v.deposit > 50 ? '<b>' + v.deposit + '%</b> of the deposit would come from family. That is a real advantage and also a real entanglement — money that arrives with opinions attached rarely stops having them at closing.'
+                          : 'Mostly your own deposit. Whatever you decide is genuinely yours to decide.' }
+    ];
+
+    var titles = ["It's theirs. You inherited the wanting.",
+                  'Mostly inherited, with a real kernel in there.',
+                  'Genuinely mixed — both things are true.',
+                  'Mostly yours, with some background noise.',
+                  "It's yours. Go buy the house."];
+
+    return {
+      score: authenticity, vibe: vibe, title: Y2K.pick(titles, authenticity),
+      blurb: authenticity < 40
+        ? 'The reasons that scored highest were external: guilt, comparison, parental frequency, and the feeling of being behind. Strip those out and there is not much wanting left underneath. This is not a verdict against buying — it is a warning against buying to end a feeling, because the feeling usually survives the purchase.'
+        : authenticity < 62
+          ? 'Both things are real. You want the walls AND you want the approval. That is the normal human position, and it is workable as long as you know which one is paying the mortgage.'
+          : 'This is your own desire. It survives the private test, it survives the money-neutral test, and it has specifics attached. That is what an authentic preference looks like.',
+      stats: [
+        { k: 'authenticity', v: Math.round(authenticity) + '%' },
+        { k: 'inherited pressure', v: Math.round(100 - authenticity) + '%' },
+        { k: 'timeline fit', v: Math.round(fitScore) + '/100' },
+        { k: 'era gap', v: eraGap > 1 ? 'large' : eraGap > 0 ? 'moderate' : 'small' }
+      ],
+      receipts: receipts,
+      advice: authenticity < 45
+        ? 'Run the private experiment: decide, without telling anyone, that you will not buy for two years. If the relief is bigger than the loss, you have your answer — and it cost nothing.'
+        : v.stay <= 1
+          ? 'You want it and the timeline does not support it yet. Those are compatible: wanting it is permanent, buying it can wait for a city you have chosen.'
+          : 'Buy it. Then do not tell your parents the number, because they will convert it into 1987 dollars in their head and say something.'
+    };
+  }
+});
+</script>
+</body>
+</html>

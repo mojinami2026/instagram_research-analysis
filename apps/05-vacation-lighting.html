@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Am I Hot — or Is This Just Vacation Lighting?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🕶️</text></svg>">
+<style>
+  .shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 10px; margin-top: 12px; }
+  .shot { background:#fff; border:2px solid var(--lilac); border-radius:6px; padding:6px; box-shadow:2px 2px 0 rgba(120,0,90,.2); text-align:center; }
+  .shot img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:4px; display:block; }
+  .shot b { font-family:'VT323','Courier New',ui-monospace,monospace; font-size:20px; color:var(--hotpink); }
+  .shot span { display:block; font-size:11.5px; opacity:.8; line-height:1.25; }
+  .rank { margin:0; padding:0; list-style:none; counter-reset: r; }
+  .rank li { counter-increment: r; display:flex; gap:10px; align-items:center; background:#fff; border-left:6px solid var(--pink);
+             border-radius:4px; padding:8px 10px; margin-bottom:7px; box-shadow:2px 2px 0 rgba(120,0,90,.15); font-size:14px; }
+  .rank li::before { content:'#' counter(r); font-family:'VT323','Courier New',ui-monospace,monospace; font-size:24px; color:var(--lilac); min-width:34px; }
+  .rank img { width:52px; height:52px; object-fit:cover; border-radius:4px; flex:none; }
+  .drop { border:3px dashed var(--hotpink); border-radius:8px; padding:18px; text-align:center; background:rgba(255,255,255,.6); }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+(function () {
+  var SHOTS = [];   // {name, url, m:{...}}
+  var APPS = [
+    { n: 'Hinge',    w: { sharp: 1.3, sat: .5, lum: .6, warm: .3, face: 1.2 }, taste: 'wants a real face in real light' },
+    { n: 'Tinder',   w: { sharp: .7, sat: 1.1, lum: 1.3, warm: 1.0, face: .8 }, taste: 'wants bright, loud, thumb-stopping' },
+    { n: 'Bumble',   w: { sharp: 1.0, sat: .9, lum: 1.0, warm: .8, face: 1.0 }, taste: 'wants "put together on a Tuesday"' },
+    { n: 'LinkedIn', w: { sharp: 1.4, sat: .2, lum: .9, warm: -.4, face: 1.3 }, taste: 'is punishing you for the tan' },
+    { n: 'Instagram',w: { sharp: .8, sat: 1.4, lum: 1.1, warm: 1.3, face: .5 }, taste: 'does not care about you, only the sky' }
+  ];
+
+  function analyze(img) {
+    var N = 96, c = document.createElement('canvas');
+    c.width = c.height = N;
+    var g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0, N, N);
+    var d;
+    try { d = g.getImageData(0, 0, N, N).data; } catch (e) { return null; }
+
+    var lum = new Float32Array(N * N);
+    var sumL = 0, sumR = 0, sumG = 0, sumB = 0, sumS = 0, warmPix = 0, skinPix = 0;
+    for (var i = 0, p = 0; i < d.length; i += 4, p++) {
+      var R = d[i], G = d[i + 1], B = d[i + 2];
+      var L = 0.299 * R + 0.587 * G + 0.114 * B;
+      lum[p] = L; sumL += L; sumR += R; sumG += G; sumB += B;
+      var mx = Math.max(R, G, B), mn = Math.min(R, G, B);
+      sumS += mx === 0 ? 0 : (mx - mn) / mx;
+      if (R > B + 18) warmPix++;
+      // crude skin-ish detector: warm, mid-bright, red-dominant
+      if (R > 95 && G > 40 && B > 20 && R > G + 15 && R > B + 15 && mx - mn > 15) skinPix++;
+    }
+    var n = N * N;
+    var meanL = sumL / n;
+    var varL = 0;
+    for (var q = 0; q < n; q++) { var dv = lum[q] - meanL; varL += dv * dv; }
+    var contrast = Math.sqrt(varL / n);
+
+    // laplacian-ish sharpness
+    var sharp = 0;
+    for (var y = 1; y < N - 1; y++) for (var x = 1; x < N - 1; x++) {
+      var k = y * N + x;
+      sharp += Math.abs(4 * lum[k] - lum[k - 1] - lum[k + 1] - lum[k - N] - lum[k + N]);
+    }
+    sharp = sharp / ((N - 2) * (N - 2));
+
+    // how much of the frame the (probable) subject occupies, weighted to center
+    var centerSkin = 0, cN = 0;
+    for (var y2 = N * .2; y2 < N * .8; y2++) for (var x2 = N * .2; x2 < N * .8; x2++) {
+      var idx = (Math.floor(y2) * N + Math.floor(x2)) * 4;
+      var R2 = d[idx], G2 = d[idx + 1], B2 = d[idx + 2];
+      cN++;
+      if (R2 > 95 && G2 > 40 && B2 > 20 && R2 > G2 + 15 && R2 > B2 + 15) centerSkin++;
+    }
+
+    var clipped = 0;
+    for (var z = 0; z < n; z++) if (lum[z] > 246) clipped++;
+
+    return {
+      lum: meanL / 255,                       // 0..1 brightness
+      contrast: Y2K.clamp(contrast / 70, 0, 1.4),
+      sat: Y2K.clamp(sumS / n * 1.6, 0, 1.4),
+      warm: Y2K.clamp((sumR - sumB) / n / 60, -1, 1.4),
+      sharp: Y2K.clamp(sharp / 12, 0, 1.5),
+      face: Y2K.clamp((centerSkin / cN) * 4, 0, 1.3),
+      skin: skinPix / n,
+      blown: clipped / n,
+      goldenHour: 0
+    };
+  }
+
+  function lightingBonus(m) {
+    // the exact recipe of "vacation lighting": warm + bright + saturated + soft
+    var golden = Y2K.clamp((m.warm * .9 + (m.lum - .42) * 1.6 + (m.sat - .35) * 1.1 - Math.max(0, m.sharp - .9) * .5), 0, 1.6);
+    return golden;
+  }
+
+  function appScore(m, w) {
+    var raw = 50
+      + (m.sharp - .55) * 26 * w.sharp
+      + (m.sat - .40) * 30 * w.sat
+      + (m.lum - .45) * 40 * w.lum
+      + (m.warm) * 16 * w.warm
+      + (m.face - .35) * 26 * w.face
+      + (m.contrast - .55) * 14
+      - m.blown * 60;
+    return Y2K.clamp(raw, 3, 97);
+  }
+
+  function shotsHTML() {
+    return SHOTS.map(function (s, i) {
+      return '<div class="shot"><img src="' + s.url + '" alt="photo ' + (i + 1) + '">' +
+        '<b>' + Math.round(s.avg) + '</b><span>' + s.tag + '</span></div>';
+    }).join('');
+  }
+
+  Y2K.app({
+    title: 'Am I Hot — or Is This Just Vacation Lighting?',
+    emoji: '🕶️🌅',
+    file: 'lighting_audit',
+    sub: 'Drop in your photos. We run them through five <em>dating-app simulations</em> and separate you from the sunset you were standing in front of.',
+    intro: 'Photos are read by your browser with a canvas element and never leave this device. The rudeness, however, is real.',
+    button: '✧ RANK ME BRUTALLY ✧',
+    meterLabel: 'the you-score: what survives after the lighting is subtracted',
+    loaderLines: ['SAMPLING PIXELS ...', 'ISOLATING GOLDEN HOUR VARIABLE ...', 'SIMULATING 5 APPS x 4000 SWIPES ...', 'REMOVING THE SUNSET FROM YOUR PERSONALITY ...'],
+    ticker: 'no photo is uploaded anywhere. the math happens in your browser.',
+
+    fields: [
+      { type: 'html', html:
+        '<div class="field"><span class="field__legend">Your photo lineup' +
+        '<span class="field__hint">3–6 photos works best. Include at least one taken indoors on a normal day — that is the control group, and the control group is where the truth lives.</span></span>' +
+        '<div class="drop"><input type="file" id="pics" accept="image/*" multiple style="font-family:inherit">' +
+        '<p style="margin:8px 0 0;font-size:13px" id="picstatus">no photos loaded yet</p></div>' +
+        '<div class="shots" id="shots"></div></div>' },
+      { id: 'context', type: 'choice', label: 'Where were most of these taken?',
+        options: [
+          { v: 3, label: '🌅 abroad / on a boat / at golden hour' },
+          { v: 2, label: '🍸 nights out, flash on' },
+          { v: 1, label: '🏠 normal life, normal rooms' },
+          { v: 0, label: '📸 an actual photographer took them' }
+        ], default: 3 },
+      { id: 'who', type: 'choice', label: 'Who took them?',
+        options: [
+          { v: 2, label: 'me, at arm\'s length' },
+          { v: 1, label: 'a friend who was told exactly what to do' },
+          { v: 0, label: 'a stranger, candidly' }
+        ], default: 1 },
+      { id: 'irl', type: 'slider', min: 0, max: 10, default: 5,
+        label: 'When people meet you in person after seeing photos, the reaction is:',
+        ticks: ['visible recalculation', 'pleasantly surprised'] }
+    ],
+
+    onMount: function (form) {
+      var input = form.querySelector('#pics');
+      var status = form.querySelector('#picstatus');
+      var grid = form.querySelector('#shots');
+      input.addEventListener('change', function () {
+        SHOTS.length = 0;
+        grid.innerHTML = '';
+        var files = Array.prototype.slice.call(input.files || []).slice(0, 8);
+        if (!files.length) { status.textContent = 'no photos loaded yet'; return; }
+        status.textContent = 'reading ' + files.length + ' photo(s) ...';
+        var done = 0;
+        files.forEach(function (f) {
+          var url = URL.createObjectURL(f);
+          var img = new Image();
+          img.onload = function () {
+            var m = analyze(img);
+            if (m) {
+              m.goldenHour = lightingBonus(m);
+              var scores = APPS.map(function (a) { return appScore(m, a.w); });
+              var avg = scores.reduce(function (x, y) { return x + y; }, 0) / scores.length;
+              SHOTS.push({
+                name: f.name, url: url, m: m, scores: scores, avg: avg,
+                tag: m.goldenHour > .8 ? 'lighting did this' :
+                     m.blown > .06 ? 'blown highlights' :
+                     m.sharp < .35 ? 'soft / blurry' :
+                     m.face < .25 ? 'where are you' : 'honest photo'
+              });
+            }
+            done++;
+            if (done === files.length) {
+              SHOTS.sort(function (a, b) { return b.avg - a.avg; });
+              grid.innerHTML = shotsHTML();
+              status.textContent = SHOTS.length + ' photo(s) analyzed. now scroll down and press the button.';
+            }
+          };
+          img.onerror = function () { done++; if (done === files.length) status.textContent = 'some files could not be read.'; };
+          img.src = url;
+        });
+      });
+    },
+
+    compute: function (v) {
+      if (!SHOTS.length) {
+        return { score: 50, scoreText: '—', vibe: 'mid', title: 'You did not give us any photos',
+          blurb: 'Extremely telling. Load at least two images and try again.',
+          advice: 'Pick your current top photo and your most normal indoor photo. That contrast is the entire test.' };
+      }
+
+      var avgAll = SHOTS.reduce(function (a, s) { return a + s.avg; }, 0) / SHOTS.length;
+      var golden = SHOTS.reduce(function (a, s) { return a + s.m.goldenHour; }, 0) / SHOTS.length;
+      var faceAvg = SHOTS.reduce(function (a, s) { return a + s.m.face; }, 0) / SHOTS.length;
+      var sharpAvg = SHOTS.reduce(function (a, s) { return a + s.m.sharp; }, 0) / SHOTS.length;
+      var spread = SHOTS[0].avg - SHOTS[SHOTS.length - 1].avg;
+
+      // subtract the environment: lighting, location, and staging
+      var envCredit = golden * 16 + v.context * 3.4 + (2 - v.who) * 1.5;
+      var youScore = Y2K.clamp(avgAll - envCredit + (v.irl - 5) * 2.4 + faceAvg * 8, 3, 97);
+      var lightingShare = Y2K.clamp((avgAll - youScore) / Math.max(avgAll, 1) * 100, 0, 90);
+
+      // per-app verdicts on the best photo
+      var best = SHOTS[0], worst = SHOTS[SHOTS.length - 1];
+      var appLines = APPS.map(function (a, i) {
+        return '<li><img src="' + best.url + '" alt=""><span><b>' + a.n + '</b> — ' +
+          Math.round(best.scores[i]) + '/100. It ' + a.taste + '.</span></li>';
+      }).join('');
+
+      var rankHTML = '<div class="subhead">☆ your lineup, ranked (worst last, sorry)</div><ul class="rank">' +
+        SHOTS.map(function (s) {
+          var m = s.m;
+          var why = m.goldenHour > .8 ? 'This is a photo of good light that you happen to be in.' :
+                    m.blown > .06 ? Math.round(m.blown * 100) + '% of this frame is blown out. The sun won.' :
+                    m.sharp < .35 ? 'Soft focus. Flattering, and everyone knows why it is there.' :
+                    m.face < .25 ? 'You are a small figure in a large landscape. This is a postcard, not a profile.' :
+                    m.sat > .95 ? 'Saturation is doing overtime. Dial the filter back 30%.' :
+                    'Clean, sharp, well-lit, and it is actually of you. Lead with this one.';
+          return '<li><img src="' + s.url + '" alt=""><span><b>' + Math.round(s.avg) + '/100</b> — ' + why + '</span></li>';
+        }).join('') + '</ul>' +
+        '<div class="subhead">☆ how the best one performs per app</div><ul class="rank">' + appLines + '</ul>';
+
+      var vibe = youScore >= 62 ? 'good' : youScore >= 45 ? 'mid' : 'bad';
+      return {
+        score: youScore, vibe: vibe,
+        title: lightingShare > 34
+          ? 'It is substantially the lighting.'
+          : lightingShare > 18
+            ? 'It is you, with a very good publicist.'
+            : 'It is genuinely you. The lighting is barely helping.',
+        blurb: 'Your photos average <b>' + Math.round(avgAll) + '/100</b> across five simulated apps. ' +
+          'After subtracting golden hour, location, and staging, <b>' + Math.round(youScore) + '/100</b> is left. ' +
+          'That difference — <b>' + Math.round(lightingShare) + '%</b> — was the environment.',
+        stats: [
+          { k: 'raw photo score', v: Math.round(avgAll) },
+          { k: 'lighting\'s share', v: Math.round(lightingShare) + '%' },
+          { k: 'best-to-worst spread', v: Math.round(spread) + ' pts' },
+          { k: 'photos analyzed', v: SHOTS.length }
+        ],
+        receipts: [
+          { vibe: golden > .8 ? 'bad' : 'good',
+            t: 'Golden-hour index across your lineup: <b>' + Y2K.round(golden, 2) + '</b>. ' +
+               (golden > .8 ? 'Warm, bright, soft, saturated — the exact chemical signature of a photo taken on vacation at 7pm.' : 'Your lighting is normal. Good. Nothing to hide behind, nothing to blame.') },
+          { vibe: faceAvg > .4 ? 'good' : 'bad',
+            t: 'Average subject presence: <b>' + Y2K.round(faceAvg, 2) + '</b>. ' +
+               (faceAvg > .4 ? 'You are actually visible in your own photos, which is a shockingly rare achievement.' : 'You are mostly a small shape near a landmark. People swipe on faces, not on architecture.') },
+          { vibe: sharpAvg > .5 ? 'good' : 'mid',
+            t: 'Average sharpness: <b>' + Y2K.round(sharpAvg, 2) + '</b>. ' +
+               (sharpAvg > .5 ? 'Crisp. You are not hiding.' : 'Soft across the board. One sharp photo would prove more than five soft ones.') },
+          { vibe: spread > 22 ? 'bad' : 'good',
+            t: 'Your best photo beats your worst by <b>' + Math.round(spread) + ' points</b>. ' +
+               (spread > 22 ? 'That is not a lineup, that is a bait and switch. Delete the bottom one — a profile is judged by its weakest photo, not its best.' : 'Consistent lineup. Nobody is getting surprised.') },
+          { vibe: v.irl >= 6 ? 'good' : 'bad',
+            t: 'You rated the in-person reaction <b>' + v.irl + '/10</b>. ' +
+               (v.irl >= 6 ? 'This is the only score that has ever mattered and you are passing it.' : 'If people recalculate when they meet you, the photos are overselling. Fix the photos, not the face.') }
+        ],
+        extra: rankHTML,
+        advice: lightingShare > 34
+          ? 'Take one photo tomorrow, indoors, at 2pm, no filter, phone held by someone else. If you still like it, you were always fine and the sunset was just a hype man.'
+          : 'Lead with photo #1, cut the bottom one entirely, and add one where you are doing something with your hands. That is the whole optimization.'
+      };
+    }
+  });
+})();
+</script>
+</body>
+</html>

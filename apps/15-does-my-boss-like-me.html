@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Does My Boss Like Me — or Am I Just Useful?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>📎</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Does My Boss Like Me — or Am I Just Useful?',
+  emoji: '📎🫡',
+  file: 'manager_read',
+  sub: 'Tracks praise, promotions, emergency requests, and the tell-all metric: <em>after-hours messages</em>.',
+  intro: 'Managers are extremely good at making usefulness feel like fondness. It is not malicious. It is just cheaper.',
+  button: '✧ READ MY MANAGER ✧',
+  meterLabel: 'sponsorship score — praise is cheap, sponsorship costs them something',
+  loaderLines: ['SEPARATING PRAISE FROM PAYMENT ...', 'TIMESTAMPING "quick favor" MESSAGES ...', 'CHECKING WHO GOT THE GOOD PROJECT ...'],
+  ticker: 'praise is free. promotions are not. watch what they spend.',
+
+  fields: [
+    { id: 'praise', type: 'slider', min: 0, max: 10, default: 7,
+      label: 'How much verbal praise do you get?', ticks: ['none', 'constant'] },
+    { id: 'public', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much of that praise happens in front of THEIR boss?',
+      ticks: ['none — always private', 'always public'] },
+    { id: 'raise', type: 'choice', label: 'Concrete advancement in the last 18 months:',
+      options: [
+        { v: 3, label: 'promotion + raise' }, { v: 2, label: 'meaningful raise' },
+        { v: 1, label: 'title change, no money' }, { v: 0, label: 'nothing' }
+      ], default: 0 },
+    { id: 'emergency', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How often are you the one asked to fix emergencies?', ticks: ['never', 'always me'] },
+    { id: 'afterhours', type: 'choice', label: 'After-hours messages from them:',
+      options: [
+        { v: 0, label: 'never' }, { v: 1, label: 'rare, and they apologize' },
+        { v: 2, label: 'regular, and expected' }, { v: 3, label: 'weekends and holidays' }
+      ], default: 2 },
+    { id: 'growth', type: 'slider', min: 0, max: 10, default: 4,
+      label: 'How much do they invest in your growth?',
+      hint: 'Stretch projects, real feedback, conferences, defending your time.', ticks: ['zero', 'actively builds me'] },
+    { id: 'glamour', type: 'slider', min: 0, max: 100, step: 5, default: 40,
+      label: 'What % of your work is high-visibility vs. invisible cleanup?',
+      ticks: ['0% — all cleanup', '100% — all showcase'] },
+    { id: 'personal', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'Do they treat you like a person? (asks about your life, remembers things)',
+      ticks: ['pure transaction', 'genuinely warm'] },
+    { id: 'signs', type: 'checks', label: 'Have any of these happened?',
+      options: [
+        { v: 'shield', label: 'They have protected you from above when something went wrong' },
+        { v: 'credit', label: 'Your work has been presented upward without your name on it' },
+        { v: 'nowin', label: 'They blocked or delayed a move that would have been good for you' },
+        { v: 'sponsor', label: 'They have recommended you for something unprompted' },
+        { v: 'no', label: 'They have accepted a "no" from you without friction' },
+        { v: 'guilt', label: 'Requests come with "you\'re the only one I trust with this"' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var s = v.signs || [];
+    var sponsorship = 20;
+    sponsorship += v.raise * 11;
+    sponsorship += v.public * 2.6;
+    sponsorship += v.growth * 3.2;
+    sponsorship += (v.glamour - 40) * 0.22;
+    sponsorship += v.personal * 1.4;
+    if (s.indexOf('shield') > -1) sponsorship += 12;
+    if (s.indexOf('sponsor') > -1) sponsorship += 14;
+    if (s.indexOf('no') > -1) sponsorship += 8;
+    if (s.indexOf('credit') > -1) sponsorship -= 14;
+    if (s.indexOf('nowin') > -1) sponsorship -= 16;
+    if (s.indexOf('guilt') > -1) sponsorship -= 8;
+    sponsorship -= v.afterhours * 3.2;
+    sponsorship -= Math.max(0, v.emergency - 5) * 2.4;
+    sponsorship = Y2K.clamp(sponsorship, 3, 97);
+
+    var extraction = Y2K.clamp(v.emergency * 5 + v.afterhours * 8 + (100 - v.glamour) * 0.22 + (s.indexOf('guilt') > -1 ? 10 : 0), 0, 100);
+    var praiseGap = v.praise * 10 - sponsorship;   // lots of words, little action
+    var vibe = sponsorship >= 62 ? 'good' : sponsorship >= 38 ? 'mid' : 'bad';
+
+    var receipts = [
+      { vibe: v.raise > 0 ? 'good' : 'bad',
+        t: v.raise === 0 ? 'No promotion, raise, or title in 18 months. Whatever is being said to you, this is what is being spent on you.'
+           : v.raise === 1 ? 'A title with no money attached is the cheapest thing a company can hand out. It counts, but only on your CV.'
+           : 'Real advancement in the last 18 months. That is a manager converting words into budget, which is the only reliable signal on this page.' },
+      { vibe: praiseGap > 30 ? 'bad' : 'good',
+        t: 'Praise-to-action gap: <b>' + Math.round(Math.max(0, praiseGap)) + '</b>. ' +
+           (praiseGap > 30 ? 'You are receiving a great deal of enthusiasm and very little budget. Enthusiasm is what managers give when they do not have, or do not want to spend, anything else.'
+                           : 'Words and actions are roughly aligned. Rare and good.') },
+      { vibe: v.public >= 6 ? 'good' : 'bad',
+        t: 'Praise in front of their boss: <b>' + v.public + '/10</b>. ' +
+           (v.public >= 6 ? 'Public praise costs a manager political capital. Private praise costs nothing. They are spending.'
+                          : 'Praise stays in the room. Reputation built only in 1:1s does not survive a reorg.') },
+      { vibe: v.afterhours >= 2 ? 'bad' : 'good',
+        t: v.afterhours >= 3 ? 'Weekend and holiday messages. Your availability has been priced at zero and the market has adjusted.'
+           : v.afterhours === 2 ? 'Regular after-hours contact, treated as normal. Every unanswered boundary becomes a policy.'
+           : 'They respect your hours. Underrated, and increasingly rare.' },
+      { vibe: v.glamour >= 55 ? 'good' : 'bad',
+        t: '<b>' + v.glamour + '%</b> of your work is visible. ' +
+           (v.glamour < 40 ? 'You are doing the cleanup. Someone has to, and the person doing it is almost never the person promoted for it.' : 'Good ratio of showcase to maintenance.') },
+      { vibe: v.personal >= 7 ? 'good' : 'mid',
+        t: 'Personal warmth: <b>' + v.personal + '/10</b>. ' +
+           (v.personal >= 7 ? 'They genuinely seem to like you. Nice — but warmth and sponsorship are separate budgets, and only one of them pays rent.' : 'Purely transactional. At least it is legible.') }
+    ];
+    if (s.indexOf('credit') > -1) receipts.push({ vibe: 'bad', t: '⚠️ Your work has gone upward without your name. This is the single most damaging item on the page and it compounds every quarter.' });
+    if (s.indexOf('shield') > -1) receipts.push({ vibe: 'good', t: 'They took heat for you from above. Managers do that for people they intend to keep and grow.' });
+    if (s.indexOf('sponsor') > -1) receipts.push({ vibe: 'good', t: 'They recommended you unprompted. That is sponsorship — the real thing, not the mentorship-flavored version.' });
+
+    var titles = ['You are useful. That is the whole relationship.', 'Fond of you, invested in your output.',
+                  'They like you AND you are useful — currently in that order.', 'Genuinely backed. This is a good manager.',
+                  'They are actively building your career. Keep them.'];
+
+    return {
+      score: sponsorship, vibe: vibe, title: Y2K.pick(titles, sponsorship),
+      blurb: sponsorship < 38
+        ? 'The pattern is extraction: emergencies routed to you, availability assumed, praise generous, budget absent. None of this requires your manager to be a villain — it just requires them to have no incentive to change something that is working for them.'
+        : sponsorship < 62
+          ? 'Real regard, incomplete backing. This manager will support you if you ask precisely, and will not think of it if you do not. That is most managers.'
+          : 'Praise, money, air cover, and growth all point the same way. This is sponsorship, and it is worth more than a title bump elsewhere.',
+      stats: [
+        { k: 'sponsorship', v: Math.round(sponsorship) + '/100' },
+        { k: 'extraction index', v: Math.round(extraction) },
+        { k: 'praise-action gap', v: Math.round(Math.max(0, praiseGap)) },
+        { k: 'verdict', v: sponsorship >= 62 ? 'likes you' : sponsorship >= 38 ? 'both' : 'useful' }
+      ],
+      receipts: receipts,
+      advice: sponsorship < 38
+        ? 'Next emergency request, try: "Happy to take it — what should I drop?" Then, separately and in daylight, ask what specifically has to be true for a promotion and when it is reviewed. A vague answer to that question is itself the answer.'
+        : 'Ask them to sponsor one specific thing this quarter — a project, a room, a title. Good managers say yes and are slightly relieved you asked.'
+    };
+  }
+});
+</script>
+</body>
+</html>
