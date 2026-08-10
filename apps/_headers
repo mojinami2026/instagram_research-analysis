@@ -1,0 +1,23 @@
+# Cloudflare Pages headers.
+#
+# The CSP is the point: every app on this site tells the user that nothing they
+# type or upload leaves their device. This makes that claim enforceable by the
+# browser rather than a promise in a footer.
+#
+#   default-src 'none'  — no connect-src, so fetch/XHR/WebSocket/beacon are all
+#                         blocked outright. There is no route off this page.
+#   'unsafe-inline'     — required: apps are single files with inline <script>,
+#                         inline <style>, and style="" attributes. No remote
+#                         origins are allowed either way.
+#   img-src data: blob: — data: for the emoji favicons, blob: for the object
+#                         URLs app 05 uses to read photos into a canvas.
+
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+
+/assets/*
+  Cache-Control: public, max-age=3600, must-revalidate

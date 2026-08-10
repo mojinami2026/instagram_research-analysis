@@ -50,6 +50,38 @@ stat tiles, and "receipts". Four go beyond the engine with their own widgets: `0
 
 Adding a new one means copying an app file and rewriting the spec.
 
+## Deploying (Cloudflare Pages)
+
+`.github/workflows/deploy-apps.yml` deploys this directory to Cloudflare Pages on every
+push that touches `apps/`, and builds a preview for each PR. It smoke-tests the site first
+and refuses to deploy a broken one.
+
+**One-time setup** — add two repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Where to get it |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → My Profile → API Tokens → Create Token → **Edit Cloudflare Workers** template (this includes the Pages permissions) |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → the ID in the right-hand sidebar (or the hex string in the dashboard URL) |
+
+That's it. The workflow creates the Pages project (`overthinking-suite`) on first run if it
+doesn't exist, so nothing needs clicking in the dashboard. The site lands at
+`https://overthinking-suite.pages.dev`, with per-branch previews at
+`https://<branch>.overthinking-suite.pages.dev`.
+
+Config lives in `wrangler.toml` at the repo root (`pages_build_output_dir = "apps"`), so
+local deploys are just `npx wrangler pages deploy` from the root.
+
+**To run the smoke test yourself:**
+
+```bash
+npm install --no-save playwright && npx playwright install chromium
+node apps/tools/smoke-test.js
+```
+
+It serves `apps/` with the real `_headers` applied, then loads every page, submits every
+form, and fails on JS errors, CSP violations, external requests, dead links, or horizontal
+overflow at 390px.
+
 ## Privacy
 
 There is no server, no analytics, no account, and no external asset — not even a webfont
@@ -57,6 +89,12 @@ There is no server, no analytics, no account, and no external asset — not even
 app 05 are read via `FileReader` into a `<canvas>` and never leave the page. The only thing
 written anywhere is a fake visitor counter in `localStorage`, and app 04's sealed answers,
 which are deleted the moment they're revealed.
+
+When deployed, `_headers` ships a `Content-Security-Policy` of `default-src 'none'` with no
+`connect-src`, which means the browser itself blocks `fetch`, `XHR`, WebSockets, and image
+beacons to any other origin. The privacy promise each app makes in its footer is therefore
+enforced by the browser, not just asserted — and the smoke test verifies both that the
+block works and that the apps still function under it.
 
 ## Disclaimer
 
