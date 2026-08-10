@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Who's Settling?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>⚖️</text></svg>">
+<style>
+  .seesaw { display:flex; align-items:flex-end; gap:12px; justify-content:center; margin:16px 0 6px; }
+  .pan { text-align:center; }
+  .pan i { display:block; width:74px; background:linear-gradient(180deg,var(--pink),var(--lilac));
+           border:3px solid #fff; border-radius:6px 6px 0 0; box-shadow:2px 2px 0 rgba(120,0,90,.3);
+           transition:height 1s cubic-bezier(.2,.9,.2,1); }
+  .pan b { font-family:'VT323','Courier New',ui-monospace,monospace; font-size:24px; color:#6a0d5e; }
+  .pan span { display:block; font-size:12.5px; }
+  .handoff { text-align:center; padding:10px 0; }
+  .handoff .big { font-size:clamp(20px,4vw,30px); font-weight:700; }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+(function () {
+  var KEY = 'settling:partnerA';
+
+  function load() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+  function save(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {} }
+
+  // perceived market value, each partner's private read
+  function mv(v, p) {
+    return v[p + 'looks'] * 1.0 + v[p + 'money'] * 1.0 + v[p + 'kind'] * 1.3 +
+           v[p + 'fun'] * 1.0 + v[p + 'stable'] * 1.2 + v[p + 'ambition'] * 0.8;
+  }
+
+  var SELF = [
+    { id: 'looks', label: 'looks / presence' },
+    { id: 'money', label: 'money & career' },
+    { id: 'kind', label: 'kindness & emotional labor' },
+    { id: 'fun', label: 'fun to be around' },
+    { id: 'stable', label: 'stability & reliability' },
+    { id: 'ambition', label: 'ambition & drive' }
+  ];
+
+  function block(prefix, who) {
+    return SELF.map(function (f) {
+      return {
+        id: prefix + f.id, type: 'slider', min: 1, max: 10, default: 6,
+        label: who + ': ' + f.label, ticks: ['1', '10']
+      };
+    });
+  }
+
+  Y2K.app({
+    title: "Who's Settling?",
+    emoji: '⚖️💍',
+    file: 'market_gap',
+    sub: 'Both partners answer privately on the same device. Then the app reveals the <em>perceived market-value gap</em> — and, more interestingly, who thinks they are the lucky one.',
+    intro: 'Partner A goes first and hands the laptop over WITHOUT scrolling. Answers are stored in this browser only. This is a game. Please treat it as a game.',
+    button: '✧ LOCK IN MY ANSWERS ✧',
+    meterLabel: 'symmetry — 100 means you rate each other as equals',
+    loaderLines: ['SEALING ENVELOPE ...', 'COMPARING TWO PRIVATE OPINIONS ...', 'PREPARING TO RUIN A NICE EVENING ...'],
+    ticker: 'partner A answers first. no peeking. no peeking. no peeking.',
+
+    fields: [].concat(
+      [{ id: 'turn', type: 'choice', label: 'Who is answering right now?',
+         hint: 'Partner A answers, hands over the device, then Partner B selects "Partner B".',
+         options: [{ v: 'A', label: '🅰️ Partner A (going first)' }, { v: 'B', label: '🅱️ Partner B (A already went)' }], default: 'A' }],
+      [{ type: 'html', html: '<div class="subhead">rate YOURSELF, honestly, 1–10</div>' }],
+      block('me', 'Me'),
+      [{ type: 'html', html: '<div class="subhead">now rate YOUR PARTNER, honestly, 1–10</div>' }],
+      block('you', 'Them'),
+      [
+        { id: 'lucky', type: 'slider', min: 0, max: 10, default: 5,
+          label: 'Who got luckier in this relationship?', ticks: ['definitely them', 'definitely me'] },
+        { id: 'better', type: 'slider', min: 0, max: 10, default: 5,
+          label: 'How much do you believe you could "do better"?', ticks: ['not at all', 'easily' ] },
+        { id: 'chosen', type: 'slider', min: 0, max: 10, default: 7,
+          label: 'How chosen do you feel on an average Wednesday?', ticks: ['tolerated', 'adored'] }
+      ]
+    ),
+
+    compute: function (v) {
+      var mine = mv(v, 'me'), theirs = mv(v, 'you');
+
+      if (v.turn === 'A') {
+        save({ mine: mine, theirs: theirs, lucky: v.lucky, better: v.better, chosen: v.chosen });
+        return {
+          score: 100, scoreText: '🔒', vibe: 'good',
+          title: 'Sealed. Now hand the device over.',
+          blurb: 'Partner A is locked in. Do not scroll, do not discuss, do not "just quickly check something". Pass the laptop to Partner B and let them pick "Partner B" at the top.',
+          extra: '<div class="handoff"><div class="big blink">👉 PASS IT OVER 👈</div>' +
+                 '<p style="font-size:14px">Partner B: select <b>Partner B</b> in the first question, answer everything, and press the button. The comparison appears then.</p></div>',
+          advice: 'If Partner A is now hovering over Partner B\'s shoulder, that is already a result.'
+        };
+      }
+
+      var A = load();
+      if (!A) {
+        return { score: 50, scoreText: '⚠️', vibe: 'mid', title: 'Partner A has not answered yet',
+          blurb: 'There is nothing stored in this browser. Partner A needs to go first, on this device, in this browser.',
+          advice: 'Switch the first question to "Partner A", answer, then hand it over.' };
+      }
+
+      var B = { mine: mine, theirs: theirs, lucky: v.lucky, better: v.better, chosen: v.chosen };
+      try { localStorage.removeItem(KEY); } catch (_) {}   // the envelope is opened once
+
+      // A's view of the gap (A's self minus A's rating of B), and B's view of the same axis
+      var gapA = A.mine - A.theirs;      // + means A thinks A is "above"
+      var gapB = B.theirs - B.mine;      // + means B also thinks A is "above"
+      var agreement = Math.abs(gapA - gapB);
+      var netGap = (gapA + gapB) / 2;    // consensus tilt, + = A is perceived above
+
+      var score = Y2K.clamp(100 - Math.abs(netGap) * 6 - agreement * 3.4, 3, 98);
+      var vibe = score >= 66 ? 'good' : score >= 42 ? 'mid' : 'bad';
+
+      var direction = Math.abs(netGap) < 1.4 ? 'nobody'
+        : netGap > 0 ? 'Partner B' : 'Partner A';
+
+      var maxScale = Math.max(A.mine, A.theirs, B.mine, B.theirs, 1);
+      var h = function (x) { return Math.round((x / maxScale) * 130) + 20; };
+      var seesaw =
+        '<div class="subhead">⚖ the perceived scales</div><div class="seesaw">' +
+        '<div class="pan"><b>' + Y2K.round((A.mine + B.theirs) / 2, 1) + '</b><i style="height:' + h((A.mine + B.theirs) / 2) + 'px"></i><span>Partner A<br>(both views)</span></div>' +
+        '<div class="pan"><b>' + Y2K.round((B.mine + A.theirs) / 2, 1) + '</b><i style="height:' + h((B.mine + A.theirs) / 2) + 'px"></i><span>Partner B<br>(both views)</span></div>' +
+        '</div>';
+
+      var receipts = [
+        { vibe: Math.abs(netGap) < 1.4 ? 'good' : 'bad',
+          t: 'Consensus market-value gap: <b>' + Y2K.round(Math.abs(netGap), 1) + ' points</b>' +
+             (direction === 'nobody' ? ' — statistically nothing. You rate each other as equals, which is the actual goal.'
+                                     : ', tilting toward Partner ' + (netGap > 0 ? 'A' : 'B') + '. Both of you independently placed the same person higher.') },
+        { vibe: agreement < 2 ? 'good' : 'mid',
+          t: 'Agreement between your two private answers: <b>' + (agreement < 2 ? 'high' : agreement < 4 ? 'moderate' : 'low') +
+             '</b> (divergence ' + Y2K.round(agreement, 1) + '). ' +
+             (agreement < 2 ? 'You see the relationship the same way. That matters more than the gap itself.'
+                            : 'You are living in two different relationships, at least on paper.') },
+        { vibe: (A.lucky > 6 && B.lucky > 6) ? 'bad' : 'good',
+          t: 'Partner A rated "who got luckier" at <b>' + A.lucky + '/10</b>; Partner B at <b>' + B.lucky + '/10</b>. ' +
+             ((A.lucky <= 4 && B.lucky <= 4) ? 'You both think the OTHER one got luckier. This is the single healthiest possible outcome of this quiz and you should stop taking quizzes now.'
+              : (A.lucky > 6 && B.lucky > 6) ? 'You both think you personally got the better end. Someone is going to say something regrettable tonight.'
+              : 'One of you feels lucky, one does not. Ask the one who does not what would change that.') },
+        { vibe: Math.max(A.better, B.better) >= 7 ? 'bad' : 'good',
+          t: '"Could do better" scores: A = <b>' + A.better + '/10</b>, B = <b>' + B.better + '/10</b>. ' +
+             (Math.max(A.better, B.better) >= 7 ? 'That belief is corrosive regardless of whether it is accurate.' : 'Neither of you is shopping. Good.') },
+        { vibe: Math.min(A.chosen, B.chosen) >= 7 ? 'good' : 'bad',
+          t: '"How chosen do you feel on a Wednesday": A = <b>' + A.chosen + '/10</b>, B = <b>' + B.chosen + '/10</b>. ' +
+             (Math.min(A.chosen, B.chosen) >= 7 ? 'This is the only number on this page that predicts anything real, and it is high for both of you.'
+                                                : 'One of you feels ordinary on ordinary days. That is more fixable — and more urgent — than any market-value gap.') }
+      ];
+
+      return {
+        score: score, vibe: vibe,
+        title: direction === 'nobody' ? 'Nobody is settling.' :
+               agreement > 4 ? 'You disagree about who is settling, which is its own answer.' :
+               'You both quietly think ' + (netGap > 0 ? 'Partner B' : 'Partner A') + ' is settling.',
+        blurb: direction === 'nobody'
+          ? 'Two people answered privately and landed on "we are about even". That is rarer than it sounds and you should probably go make dinner.'
+          : 'The gap is real but small in the only way that counts: it exists in your heads. Perceived market value predicts almost nothing about whether a relationship works. The Wednesday number predicts almost everything.',
+        stats: [
+          { k: 'perceived gap', v: Y2K.round(Math.abs(netGap), 1) + ' pts' },
+          { k: 'who tilts up', v: direction === 'nobody' ? 'nobody' : (netGap > 0 ? 'Partner A' : 'Partner B') },
+          { k: 'agreement', v: agreement < 2 ? 'high' : agreement < 4 ? 'medium' : 'low' },
+          { k: 'symmetry score', v: Math.round(score) }
+        ],
+        receipts: receipts,
+        extra: seesaw + '<p class="note" style="margin-top:12px">Partner A\'s answers have now been erased from this browser. ' +
+               'Run it again from scratch if you want a rematch.</p>',
+        advice: 'Do not read this out as a scoreboard. Read out one line each: the thing you rated your partner highest on. That conversation is worth more than the gap.'
+      };
+    }
+  });
+})();
+</script>
+</body>
+</html>

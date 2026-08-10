@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Can I Quit Dramatically Yet?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🎤</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Can I Quit Dramatically Yet?',
+  emoji: '🎤🔥',
+  file: 'the_email',
+  sub: 'Savings, burnout, job-market odds, and your escalating desire to send <em>the email</em>.',
+  intro: 'Two separate questions live in here: can you quit, and can you quit DRAMATICALLY. The gap between them is measured in months of rent.',
+  button: '✧ AM I FREE ✧',
+  meterLabel: 'exit readiness',
+  loaderLines: ['COUNTING YOUR RUNWAY IN MONTHS ...', 'DRAFTING THE EMAIL (do not send) ...', 'CHECKING THE JOB MARKET, SORRY ...'],
+  ticker: 'quitting quietly on a tuesday is the same freedom for 100% less risk',
+
+  fields: [
+    { id: 'savings', type: 'num', prefix: '$', default: 12000, min: 0, step: 500, label: 'Liquid savings you would actually spend' },
+    { id: 'burn', type: 'num', prefix: '$', default: 3200, min: 100, step: 100, label: 'Monthly cost of your life', hint: 'The honest one, not the spreadsheet one.' },
+    { id: 'deps', type: 'choice', label: 'Who depends on your income?',
+      options: [{ v: 0, label: 'just me' }, { v: 1, label: 'me + a partner who earns too' }, { v: 2, label: 'me + dependents' }, { v: 3, label: 'me alone, supporting others' }], default: 0 },
+    { id: 'burnout', type: 'slider', min: 0, max: 10, default: 7,
+      label: 'Burnout level', hint: 'Sunday-night dread is the unit of measurement.', ticks: ['fine', 'nothing left'] },
+    { id: 'health', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'Is this job affecting your health?', ticks: ['not at all', 'seriously and visibly'] },
+    { id: 'market', type: 'choice', label: 'Your field\'s job market right now:',
+      options: [
+        { v: 3, label: 'hot — recruiters message me' }, { v: 2, label: 'normal' },
+        { v: 1, label: 'slow' }, { v: 0, label: 'frozen / mass layoffs' }
+      ], default: 1 },
+    { id: 'search', type: 'choice', label: 'Where are you in a job search?',
+      options: [
+        { v: 3, label: 'I have a signed offer' }, { v: 2, label: 'in final rounds somewhere' },
+        { v: 1, label: 'applying' }, { v: 0, label: 'I have not started' }
+      ], default: 0 },
+    { id: 'visa', type: 'choice', label: 'Anything tied to this job?',
+      options: [{ v: 0, label: 'nothing' }, { v: 2, label: 'health insurance' }, { v: 3, label: 'visa / immigration status' }, { v: 4, label: 'both' }], default: 2 },
+    { id: 'drama', type: 'slider', min: 0, max: 10, default: 8,
+      label: 'How badly do you want to send THE email?', ticks: ['I just want out quietly', 'reply-all, everyone, names'] },
+    { id: 'ctx', type: 'checks', label: 'Context',
+      options: [
+        { v: 'reference', label: 'I will need a reference from these people' },
+        { v: 'industry', label: 'My industry is small and everyone talks' },
+        { v: 'illegal', label: 'Something genuinely wrong is happening here' },
+        { v: 'equity', label: 'I have unvested equity or a bonus cliff coming' },
+        { v: 'notice', label: 'I have a long notice period' },
+        { v: 'sideincome', label: 'I have side income that partly covers me' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var c = v.ctx || [];
+    var runway = v.burn > 0 ? v.savings / v.burn : 0;
+    if (c.indexOf('sideincome') > -1) runway *= 1.5;
+    var needed = 3 + v.deps * 1.5 + (v.market === 0 ? 4 : v.market === 1 ? 2 : v.market === 3 ? 0 : 1);
+
+    var ready = 0;
+    ready += Y2K.clamp(runway / needed, 0, 1.4) * 46;
+    ready += v.search * 9;
+    ready += v.market * 4;
+    ready += v.burnout * 1.4;
+    ready += v.health * 1.6;
+    ready -= v.visa * 5;
+    if (c.indexOf('equity') > -1) ready -= 6;
+    ready = Y2K.clamp(ready, 2, 98);
+
+    // drama is a separate, much stricter budget
+    var dramaCost = (c.indexOf('reference') > -1 ? 22 : 0) + (c.indexOf('industry') > -1 ? 24 : 0) +
+                    (v.search < 3 ? 20 : 0) + (v.visa >= 3 ? 25 : 0) + (runway < needed ? 20 : 0);
+    var dramaOk = Y2K.clamp(100 - dramaCost, 0, 100);
+    var vibe = ready >= 60 ? 'good' : ready >= 35 ? 'mid' : 'bad';
+
+    var verdict = ready >= 60 && dramaOk >= 70 ? 'Yes. And you may be a little dramatic about it.'
+      : ready >= 60 ? 'You can quit. You cannot quit dramatically.'
+      : ready >= 35 ? 'Not yet. You are about one quarter away.'
+      : 'No. Not yet, and not like this.';
+
+    var receipts = [
+      { vibe: runway >= needed ? 'good' : 'bad',
+        t: 'Runway: <b>' + Y2K.round(runway, 1) + ' months</b> against a recommended <b>' + Y2K.round(needed, 1) +
+           '</b> for your situation and market. ' + (runway >= needed ? 'You have bought yourself the ability to say no. That is what savings are for.' : 'Short by ' + Y2K.round(needed - runway, 1) + ' months, which is roughly ' + Y2K.money((needed - runway) * v.burn) + '.') },
+      { vibe: v.health >= 7 ? 'bad' : 'mid',
+        t: v.health >= 7 ? '⚠️ You rated the health impact at ' + v.health + '/10. That outranks the financial model. Runway math assumes you are intact at the end of it.'
+                         : 'Health impact is manageable at ' + v.health + '/10.' },
+      { vibe: v.search >= 2 ? 'good' : 'bad',
+        t: v.search === 3 ? 'You have a signed offer. This entire page is a formality — go.'
+           : v.search === 0 ? 'You have not started looking. Looking while employed is dramatically easier and costs you nothing but evenings.'
+           : 'A search is underway. Finish it before you resign; the leverage is never higher than while you still have a badge.' },
+      { vibe: v.visa >= 3 ? 'bad' : 'mid',
+        t: v.visa >= 3 ? '⚠️ Your immigration status or insurance is tied to this job. That converts a bad quarter into a genuine emergency. No amount of burnout changes that arithmetic — get the next thing lined up first.'
+                       : v.visa === 2 ? 'Health insurance is attached. Price the gap before you decide on a date.' : 'Nothing structural is tied to this job. Clean exit available.' },
+      { vibe: v.drama >= 8 ? 'bad' : 'good',
+        t: 'Drama desire: <b>' + v.drama + '/10</b>. ' +
+           (v.drama >= 8 ? 'Write the email. All of it. Every name. Then put it in drafts and read it in a week — the wanting is the point, the sending is the tax.' : 'You mostly want out, not revenge. That is the cheaper and better version of this.') }
+    ];
+    if (c.indexOf('illegal') > -1) receipts.push({ vibe: 'mid', t: 'You flagged that something genuinely wrong is happening. That is not a resignation-email problem — it is a documentation problem, and possibly a lawyer or regulator problem. Keep records, get advice before you go public.' });
+    if (c.indexOf('equity') > -1) receipts.push({ vibe: 'mid', t: 'There is a vesting cliff or bonus ahead. Find the date. Quitting three weeks early is the most expensive dramatic gesture available.' });
+    if (c.indexOf('industry') > -1) receipts.push({ vibe: 'bad', t: 'Small industry, everyone talks. The audience for your dramatic exit is also the hiring pool for your next four jobs.' });
+
+    return {
+      score: ready, vibe: vibe, title: verdict,
+      blurb: ready >= 60
+        ? 'The exit is financially viable. The dramatic exit is a separate purchase, priced at <b>' + (100 - dramaOk) + '/100</b> in future-cost. Almost everyone who buys it reports that the feeling lasted about eleven minutes.'
+        : ready >= 35
+          ? 'You are close. One quarter of aggressive saving plus a live job search moves this into green. That is a real, short, finishable plan — which is more than "I quit" offers.'
+          : 'Right now quitting would trade a bad situation for a precarious one. That is not a no forever, it is a no this month. Set the date you are aiming for and it stops feeling like a trap.',
+      stats: [
+        { k: 'runway', v: Y2K.round(runway, 1) + ' mo' },
+        { k: 'runway needed', v: Y2K.round(needed, 1) + ' mo' },
+        { k: 'exit readiness', v: Math.round(ready) + '/100' },
+        { k: 'drama budget', v: Math.round(dramaOk) + '/100' }
+      ],
+      receipts: receipts,
+      advice: ready >= 60
+        ? 'Resign on a Tuesday morning, warmly, with a two-line email. The people who wronged you are not the people who will read it, and the ones who will read it are the ones who might hire you later.'
+        : 'Pick a target date, name it out loud, and automate savings toward it. Burnout is far more survivable with a deadline attached — the misery of an open-ended trap and the misery of a countdown are not the same misery.'
+    };
+  }
+});
+</script>
+</body>
+</html>

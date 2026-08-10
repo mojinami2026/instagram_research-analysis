@@ -1,0 +1,9 @@
+# Cloudflare Pages config for the Overthinking Suite (apps/).
+#
+# The suite is pure static files — no build step, no framework, no bundler — so
+# Pages just uploads the directory as-is. `pages_build_output_dir` is what makes
+# `wrangler pages deploy` work with no arguments, both in CI and locally.
+
+name = "overthinking-suite"
+pages_build_output_dir = "apps"
+compatibility_date = "2026-08-10"

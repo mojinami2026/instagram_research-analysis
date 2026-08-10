@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Do My Parents Have a Favorite Child?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🏆</text></svg>">
+<style>
+  .bars { margin:6px 0 0; }
+  .barrow { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .barrow b { width:96px; font-size:14px; text-align:right; }
+  .barrow .track { flex:1; height:26px; background:#fff; border:2px solid var(--chrome-3); border-radius:999px; overflow:hidden; }
+  .barrow .track i { display:block; height:100%; background:repeating-linear-gradient(90deg,var(--lilac) 0 12px,var(--pink) 12px 24px);
+                     transition:width 1s cubic-bezier(.2,.9,.2,1); }
+  .barrow .track i.win { background:repeating-linear-gradient(90deg,#ffd700 0 12px,#fff3a0 12px 24px); }
+  .barrow em { font-family:'VT323','Courier New',ui-monospace,monospace; font-size:22px; font-style:normal; width:44px; }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+(function () {
+  var COLS = [
+    ['n',     'child',                     'text'],
+    ['money', 'money received (lifetime $)','num'],
+    ['praise','praise in public /10',      'num'],
+    ['visits','visits from parents (yr)',  'num'],
+    ['photos','photos displayed at home',  'num'],
+    ['calls', 'unprompted calls (mo)',     'num'],
+    ['blame', 'blamed when things go wrong /10', 'num']
+  ];
+  var SEED = [
+    { n: 'me',      money: 4000,  praise: 5, visits: 1, photos: 3, calls: 2, blame: 6 },
+    { n: 'sibling', money: 22000, praise: 8, visits: 4, photos: 9, calls: 6, blame: 2 }
+  ];
+
+  function rowHTML(r) {
+    return '<tr>' + COLS.map(function (c) {
+      return '<td' + (c[0] === 'n' ? '' : ' style="width:92px"') + '><input data-col="' + c[0] + '"' +
+        (c[2] === 'num' ? ' type="number" min="0" step="1"' : ' placeholder="name"') +
+        ' value="' + Y2K.esc(r[c[0]]) + '"></td>';
+    }).join('') + '</tr>';
+  }
+
+  Y2K.app({
+    title: 'Do My Parents Have a Favorite Child?',
+    emoji: '🏆👨‍👩‍👧‍👦',
+    file: 'favoritism',
+    sub: 'Financial support, public praise, visits, photos displayed, and — the dark horse — <em>inheritance clues</em>.',
+    intro: 'List every child, including yourself, with "me" as one of the rows. Yes, this is a lot. So is the feeling that made you open this.',
+    button: '✧ CROWN SOMEBODY ✧',
+    meterLabel: 'favoritism gap — how far the leader is ahead of you',
+    loaderLines: ['COUNTING FRAMED PHOTOGRAPHS ...', 'AUDITING WEDDING CONTRIBUTIONS ...', 'READING THE WILL (metaphorically) ...'],
+    ticker: 'the favorite child is usually the one who needed the most help',
+
+    fields: [
+      { type: 'html', html:
+        '<div class="field"><span class="field__legend">The children' +
+        '<span class="field__hint">One row per child. Include yourself, labelled however you like. Money = rough lifetime total: tuition, deposits, "loans", the car.</span></span>' +
+        '<div class="tablewrap"><table class="table"><thead><tr>' +
+        COLS.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') +
+        '</tr></thead><tbody id="rows">' + SEED.map(rowHTML).join('') + '</tbody></table></div>' +
+        '<div class="btnrow" style="margin-top:8px">' +
+        '<button type="button" class="btn btn--ghost" id="addrow">+ add a sibling</button>' +
+        '<button type="button" class="btn btn--ghost" id="delrow">– remove last</button></div></div>' },
+      { id: 'mename', type: 'text', label: 'Which row is you?', default: 'me',
+        hint: 'Type the name exactly as you entered it above.' },
+      { id: 'clues', type: 'checks', label: 'Inheritance clues',
+        options: [
+          { v: 'house', label: 'One child has been promised the house' },
+          { v: 'exec', label: 'One child is the executor / has power of attorney' },
+          { v: 'equal', label: 'They have explicitly said it will be split equally' },
+          { v: 'loans', label: '"Loans" to one child that were never repaid or mentioned again' },
+          { v: 'business', label: 'A family business is going to one of you' },
+          { v: 'nodiscuss', label: 'The subject is completely undiscussable' }
+        ] },
+      { id: 'grandkids', type: 'choice', label: 'Grandchildren situation',
+        options: [
+          { v: 0, label: 'nobody has kids' }, { v: 1, label: 'we all do' },
+          { v: 2, label: 'only one of us does' }, { v: 3, label: 'only one of us does AND lives nearby' }
+        ], default: 0 },
+      { id: 'need', type: 'choice', label: 'Who has needed the most help over the years?',
+        options: [
+          { v: 0, label: 'me' }, { v: 1, label: 'everyone about the same' }, { v: 2, label: 'a sibling' }
+        ], default: 1 }
+    ],
+
+    collect: function (form) {
+      var kids = [];
+      form.querySelectorAll('#rows tr').forEach(function (tr) {
+        var o = {};
+        COLS.forEach(function (c) {
+          var el = tr.querySelector('[data-col="' + c[0] + '"]');
+          o[c[0]] = c[2] === 'num' ? (parseFloat(el.value) || 0) : el.value.trim();
+        });
+        if (o.n) kids.push(o);
+      });
+      return { kids: kids };
+    },
+
+    onMount: function (form) {
+      var body = form.querySelector('#rows');
+      form.querySelector('#addrow').addEventListener('click', function () {
+        body.insertAdjacentHTML('beforeend', rowHTML({ n: '', money: 0, praise: 5, visits: 1, photos: 2, calls: 2, blame: 4 }));
+      });
+      form.querySelector('#delrow').addEventListener('click', function () {
+        if (body.children.length > 2) body.lastElementChild.remove();
+      });
+    },
+
+    compute: function (v) {
+      var kids = v.kids || [];
+      if (kids.length < 2) {
+        return { score: 0, scoreText: '👑', vibe: 'good', title: 'You are an only child',
+          blurb: 'You are the favorite and the least favorite. Congratulations and condolences.',
+          advice: 'Add at least two children to run the comparison.' };
+      }
+      var maxMoney = Math.max.apply(null, kids.map(function (k) { return k.money; })) || 1;
+      var maxPhotos = Math.max.apply(null, kids.map(function (k) { return k.photos; })) || 1;
+      var maxVisits = Math.max.apply(null, kids.map(function (k) { return k.visits; })) || 1;
+      var maxCalls = Math.max.apply(null, kids.map(function (k) { return k.calls; })) || 1;
+
+      kids.forEach(function (k) {
+        k.score = Y2K.clamp(
+          (k.money / maxMoney) * 26 +
+          (k.praise / 10) * 22 +
+          (k.visits / maxVisits) * 16 +
+          (k.photos / maxPhotos) * 16 +
+          (k.calls / maxCalls) * 14 -
+          (k.blame / 10) * 18 + 12, 0, 100);
+      });
+
+      var clues = v.clues || [];
+      var ranked = kids.slice().sort(function (a, b) { return b.score - a.score; });
+      var leader = ranked[0], last = ranked[ranked.length - 1];
+      var meName = (v.mename || 'me').trim().toLowerCase();
+      var me = kids.filter(function (k) { return k.n.toLowerCase() === meName; })[0] || kids[0];
+      var myRank = ranked.indexOf(me) + 1;
+      var gap = leader.score - me.score;
+      var spread = leader.score - last.score;
+      var iAmLeader = leader === me;
+
+      var bars = '<div class="subhead">👑 the standings</div><div class="bars">' +
+        ranked.map(function (k, i) {
+          return '<div class="barrow"><b>' + Y2K.esc(k.n) + (k === me ? ' (you)' : '') + '</b>' +
+            '<div class="track"><i class="' + (i === 0 ? 'win' : '') + '" style="width:' + Math.round(k.score) + '%"></i></div>' +
+            '<em>' + Math.round(k.score) + '</em></div>';
+        }).join('') + '</div>';
+
+      var score = Y2K.clamp(gap * 2.2 + (spread > 25 ? 10 : 0), 0, 98);
+      var vibe = spread < 14 ? 'good' : gap > 22 ? 'bad' : 'mid';
+
+      var receipts = [];
+      receipts.push({ vibe: spread < 14 ? 'good' : 'bad',
+        t: 'Spread between highest and lowest child: <b>' + Math.round(spread) + ' points</b>. ' +
+           (spread < 14 ? 'That is inside the noise floor. Your parents are, statistically, treating you the same.'
+                        : 'That is a real gap. Favoritism research suggests most parents do have a preference and roughly none of them admit it.') });
+      receipts.push({ vibe: iAmLeader ? 'good' : gap > 20 ? 'bad' : 'mid',
+        t: iAmLeader ? 'You are the leader. You have been quietly suspecting the opposite this entire time, which is very common among favorites.'
+                     : 'You rank <b>#' + myRank + ' of ' + kids.length + '</b>, <b>' + Math.round(gap) + ' points</b> behind ' + Y2K.esc(leader.n) + '.' });
+      var moneyGap = leader.money - me.money;
+      if (Math.abs(moneyGap) > 1000) receipts.push({ vibe: moneyGap > 0 ? 'bad' : 'good',
+        t: 'Financial gap alone: <b>' + Y2K.money(Math.abs(moneyGap)) + '</b> ' + (moneyGap > 0 ? 'more to ' + Y2K.esc(leader.n) + ' than to you' : 'more to you than to ' + Y2K.esc(leader.n)) +
+           '. Money is the least deniable item on this page — praise is subjective, transfers are not.' });
+      if (me.photos < maxPhotos * 0.5) receipts.push({ vibe: 'bad',
+        t: 'You are under-represented on the walls: <b>' + me.photos + '</b> photos versus <b>' + maxPhotos + '</b> for the leader. ' +
+           'Everyone insists this means nothing. Everyone counts them anyway.' });
+      if (me.blame > leader.blame + 2) receipts.push({ vibe: 'bad',
+        t: 'You absorb more blame (<b>' + me.blame + '/10</b> vs <b>' + leader.blame + '/10</b>). Being the designated problem is a role, and it is usually assigned early and never reviewed.' });
+      if (clues.indexOf('equal') > -1) receipts.push({ vibe: 'good', t: 'They have said the estate splits equally. Stated intent is worth a lot, and worth more if it is written down.' });
+      if (clues.indexOf('house') > -1) receipts.push({ vibe: 'bad', t: 'One child has been promised the house. That single clue outweighs a decade of birthday cards.' });
+      if (clues.indexOf('loans') > -1) receipts.push({ vibe: 'bad', t: '"Loans" that were never repaid or mentioned again are gifts with a polite hat on.' });
+      if (clues.indexOf('nodiscuss') > -1) receipts.push({ vibe: 'mid', t: 'The subject is undiscussable, which is itself information. Families that split things evenly usually find it easy to say so.' });
+      if (v.grandkids >= 2) receipts.push({ vibe: 'mid', t: 'One sibling has the only grandchildren' + (v.grandkids === 3 ? ' and lives nearby' : '') + '. Grandchildren distort every metric on this page and it is not really about the sibling at all.' });
+      if (v.need === 2) receipts.push({ vibe: 'good', t: 'A sibling has needed the most help. Parental resources usually follow need, not affection — those look identical from the outside and feel very different from the inside.' });
+
+      return {
+        score: score, vibe: vibe,
+        title: spread < 14 ? 'No clear favorite. Genuinely.' :
+               iAmLeader ? 'The favorite is you.' :
+               'The favorite is ' + Y2K.esc(leader.n) + '.',
+        blurb: spread < 14
+          ? 'The children score within a few points of each other on every axis. Whatever is bothering you here, the data is not supporting it — which is worth knowing before a holiday.'
+          : iAmLeader
+            ? 'You lead on support, praise, and presence. This is often invisible to the favorite, which is exactly why the ranking exists.'
+            : 'There is a measurable gap, and the strongest signals are the material ones. That is real, and it is also not a verdict on your worth — parental attention distributes by need, proximity, and guilt far more often than by love.',
+        stats: [
+          { k: 'your rank', v: '#' + myRank + ' of ' + kids.length },
+          { k: 'gap to leader', v: Math.round(gap) + ' pts' },
+          { k: 'total spread', v: Math.round(spread) + ' pts' },
+          { k: 'inheritance clues', v: clues.length }
+        ],
+        receipts: receipts,
+        extra: bars,
+        advice: spread < 14
+          ? 'Nothing to do. Go call them, they are counting your calls too.'
+          : 'The version of this conversation that works is specific and non-accusatory: "when you paid for X, I felt like Y." The version that never works is "you always liked them more." One is a data point, the other is a war.'
+      };
+    }
+  });
+})();
+</script>
+</body>
+</html>

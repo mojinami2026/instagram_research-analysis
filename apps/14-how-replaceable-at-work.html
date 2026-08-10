@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How Replaceable Am I at Work?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🚌</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'How Replaceable Am I at Work?',
+  emoji: '🚌📉',
+  file: 'bus_factor',
+  sub: 'Undocumented knowledge, meeting invitations, Slack response dependency, and your personal <em>bus factor</em>.',
+  intro: 'Being irreplaceable is not the same as being valued. This app measures the first one and then says something unwelcome about the second.',
+  button: '✧ CALCULATE MY BUS FACTOR ✧',
+  meterLabel: 'replaceability — high means they would be fine without you',
+  loaderLines: ['GREPPING FOR YOUR NAME IN RUNBOOKS ...', 'SIMULATING YOUR RESIGNATION ...', 'ASKING WHO ELSE KNOWS HOW THAT WORKS ...'],
+  ticker: 'if you cannot take a two-week holiday, that is not job security, that is a hostage situation',
+
+  fields: [
+    { id: 'undoc', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How much of what you know exists ONLY in your head?',
+      ticks: ['all documented', 'entirely undocumented'] },
+    { id: 'bus', type: 'choice', label: 'If you vanished tomorrow, how many people could do your core work?',
+      options: [
+        { v: 0, label: 'zero — things would break' }, { v: 1, label: 'one person, badly' },
+        { v: 2, label: 'two or three, slowly' }, { v: 3, label: 'anyone on the team' }
+      ], default: 1 },
+    { id: 'slack', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How often does work stall waiting for YOUR reply?', ticks: ['never', 'daily'] },
+    { id: 'meetings', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How often are you in the room where decisions actually get made?',
+      ticks: ['never invited', 'always, by default'] },
+    { id: 'holiday', type: 'choice', label: 'Last time you took two consecutive weeks off:',
+      options: [
+        { v: 0, label: 'went fine, barely contacted' }, { v: 1, label: 'a few messages' },
+        { v: 2, label: 'I worked through it' }, { v: 3, label: 'I have not dared' }
+      ], default: 1 },
+    { id: 'skills', type: 'choice', label: 'Your skills are:',
+      options: [
+        { v: 3, label: 'portable — every company needs this' },
+        { v: 2, label: 'mostly portable, some company-specific' },
+        { v: 1, label: 'largely specific to this company\'s systems' },
+        { v: 0, label: 'entirely specific to this company\'s mess' }
+      ], default: 2 },
+    { id: 'relationships', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much do you personally hold key client/team relationships?',
+      ticks: ['none', 'they would follow me'] },
+    { id: 'visible', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How visible is your work to people two levels up?',
+      ticks: ['invisible', 'they name-check me'] },
+    { id: 'signs', type: 'checks', label: 'Also true:',
+      options: [
+        { v: 'called', label: 'You get called on holidays/weekends when something breaks' },
+        { v: 'onlyone', label: 'You are the only person with certain access or credentials' },
+        { v: 'training', label: 'You are training your own replacement right now' },
+        { v: 'automated', label: 'A large part of your job could be automated' },
+        { v: 'raise', label: 'You got a real raise or promotion in the last 18 months' },
+        { v: 'restructure', label: 'There has been a reorg or layoff round recently' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var s = v.signs || [];
+    var repl = 50;
+    repl -= v.undoc * 3.4;
+    repl += v.bus * 8;
+    repl -= v.slack * 2.2;
+    repl -= v.relationships * 2.4;
+    repl += (v.holiday === 0 ? 12 : v.holiday === 1 ? 4 : v.holiday === 2 ? -6 : -12);
+    if (s.indexOf('called') > -1) repl -= 8;
+    if (s.indexOf('onlyone') > -1) repl -= 9;
+    if (s.indexOf('training') > -1) repl += 18;
+    if (s.indexOf('automated') > -1) repl += 12;
+    if (s.indexOf('restructure') > -1) repl += 6;
+    repl = Y2K.clamp(repl, 3, 97);
+
+    // the sting: irreplaceable ≠ valued, and irreplaceable ≠ promotable
+    var trapped = Y2K.clamp((100 - repl) * 0.6 + (10 - v.visible) * 3 + (3 - v.skills) * 6 - (s.indexOf('raise') > -1 ? 18 : 0), 0, 100);
+    var busFactor = v.bus === 0 ? 1 : v.bus === 1 ? 2 : v.bus === 2 ? 3 : 5;
+    var vibe = repl > 70 ? 'bad' : trapped > 60 ? 'mid' : 'good';
+
+    var receipts = [
+      { vibe: v.undoc >= 7 ? 'mid' : 'good',
+        t: 'Undocumented knowledge: <b>' + v.undoc + '/10</b>. ' +
+           (v.undoc >= 7 ? 'This feels like leverage. It is actually a cage — it makes you hard to replace AND hard to promote, because promoting you creates the exact gap they are avoiding.'
+                         : 'Well documented. That makes you promotable, which is worth more than being irreplaceable.') },
+      { vibe: busFactor <= 2 ? 'mid' : 'bad',
+        t: 'Bus factor: <b>' + busFactor + '</b>. ' + (busFactor <= 2 ? 'The org has a real single-point-of-failure risk and it is you. That is leverage, but only if you use it deliberately and once.' : 'Comfortable redundancy. Good for the company, less good for your negotiating position.') },
+      { vibe: v.holiday >= 2 ? 'bad' : 'good',
+        t: v.holiday >= 3 ? 'You have not dared take two consecutive weeks. That is the clearest possible signal, and it is a signal about the org\'s design, not your importance.'
+           : v.holiday === 2 ? 'You worked through your last long holiday. The company has learned it can have both.'
+           : 'You took real time off and things held. That is what healthy looks like.' },
+      { vibe: v.visible >= 7 ? 'good' : 'bad',
+        t: 'Visibility two levels up: <b>' + v.visible + '/10</b>. ' +
+           (v.visible >= 7 ? 'Senior people know your name. This is the variable that actually converts into money.'
+                           : 'Low visibility plus high dependency is the worst square on the board: critical enough to be called at midnight, invisible enough to be missed at promotion time.') },
+      { vibe: v.skills >= 2 ? 'good' : 'bad',
+        t: 'Skill portability: <b>' + ['not portable','low','mostly portable','fully portable'][v.skills] + '</b>. ' +
+           (v.skills <= 1 ? 'Your value is largely non-transferable. That quietly caps your outside options, which quietly caps your inside options.' : 'You could leave. Knowing that changes how you negotiate even if you never do.') }
+    ];
+    if (s.indexOf('training') > -1) receipts.push({ vibe: 'bad', t: '⚠️ You are training your replacement. Sometimes that means promotion. Sometimes it means the other thing. Ask directly which one it is, this week.' });
+    if (s.indexOf('raise') > -1) receipts.push({ vibe: 'good', t: 'You were given real money in the last 18 months. Money is the only performance review that cannot be faked.' });
+    if (s.indexOf('onlyone') > -1 && v.visible < 6) receipts.push({ vibe: 'bad', t: 'Sole credential holder, low visibility. You are infrastructure. Infrastructure gets maintained, not promoted.' });
+
+    var titles = ['Irreplaceable — and stuck.', 'Hard to replace, easy to overlook.', 'Normal. You matter and they would survive.',
+                  'Fairly replaceable, which is not an insult.', 'Highly replaceable. Act accordingly.'];
+
+    return {
+      score: repl, vibe: vibe, title: Y2K.pick(titles, repl),
+      blurb: repl < 32
+        ? 'Replacing you would genuinely hurt. The uncomfortable half: the traits that make you hard to replace — undocumented knowledge, being the only one with access, personally holding relationships — are the same traits that make you hard to move upward. Companies protect what they cannot afford to move.'
+        : repl > 70
+          ? 'The work is distributed, documented, and portable. This means less leverage in a negotiation and much more freedom in a job search. Freedom is usually the better asset.'
+          : 'You sit in the healthy middle: valued, not load-bearing. Things would wobble and then be fine, which is the correct amount of important for a job to be.',
+      stats: [
+        { k: 'replaceability', v: Math.round(repl) + '/100' },
+        { k: 'bus factor', v: busFactor },
+        { k: 'trapped index', v: Math.round(trapped) },
+        { k: 'leverage', v: repl < 35 ? 'high' : repl < 60 ? 'medium' : 'low' }
+      ],
+      receipts: receipts,
+      advice: repl < 40
+        ? 'Convert dependency into money or title within the next quarter, then document everything. Leverage that is never cashed in decays into resentment — and it evaporates entirely the moment someone else learns the system.'
+        : 'Build one thing only you understand well, make it visible, and write the doc anyway. That combination is the actual job security.'
+    };
+  }
+});
+</script>
+</body>
+</html>

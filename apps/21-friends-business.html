@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>When Should I Stop Supporting This Friend's Business?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🕯️</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: "When Should I Stop Supporting This Friend's Business?",
+  emoji: '🕯️🛍️',
+  file: 'candle_ledger',
+  sub: 'Tracks purchases, product quality, reciprocity, and the eternal question: <em>how many candle launches is enough?</em>',
+  intro: 'Supporting a friend is a gift. Gifts have budgets. Nobody told anyone this and now we are all here.',
+  button: '✧ CALCULATE MY EXIT ✧',
+  meterLabel: 'obligation load — how much of this is duty rather than desire',
+  loaderLines: ['COUNTING LAUNCH ANNOUNCEMENTS ...', 'VALUING UNUSED PRODUCTS IN YOUR CUPBOARD ...', 'CHECKING IF THEY CAME TO YOUR THING ...'],
+  ticker: 'you are allowed to not want a fourth candle',
+
+  fields: [
+    { id: 'spent', type: 'num', prefix: '$', default: 320, min: 0, step: 10,
+      label: 'Total spent on their business so far' },
+    { id: 'months', type: 'num', default: 18, min: 1, max: 240, step: 1, label: 'How long has this been going?', suffix: 'mo' },
+    { id: 'launches', type: 'num', default: 4, min: 0, max: 60, step: 1, label: 'Number of "launches" you have been invited to' },
+    { id: 'quality', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'Honestly — how good is the product?',
+      hint: 'Would you buy it from a stranger at that price?', ticks: ['bad', 'genuinely great'] },
+    { id: 'want', type: 'slider', min: 0, max: 10, default: 3,
+      label: 'How much do you actually want the things you have bought?', ticks: ['zero', 'use them constantly'] },
+    { id: 'ask', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How much do they ask of you?',
+      hint: 'Purchases, shares, feedback, "can you post this", bringing friends.', ticks: ['never asks', 'relentless'] },
+    { id: 'recip', type: 'slider', min: 0, max: 10, default: 3,
+      label: 'How much do they support YOUR things?', ticks: ['not at all', 'always shows up'] },
+    { id: 'friendship', type: 'slider', min: 0, max: 10, default: 7,
+      label: 'How strong is the actual friendship, business aside?', ticks: ['acquaintance', 'core person'] },
+    { id: 'shift', type: 'slider', min: 0, max: 10, default: 4,
+      label: 'How much has the business changed how you two talk?', ticks: ['not at all', 'every convo is the business'] },
+    { id: 'flags', type: 'checks', label: 'Any of these?',
+      options: [
+        { v: 'mlm', label: 'It is an MLM / recruitment-based' },
+        { v: 'guilt', label: 'There is guilt when I do not buy' },
+        { v: 'improved', label: 'The product has clearly improved over time' },
+        { v: 'paid', label: 'They have paid me back / discounted / thanked me properly' },
+        { v: 'real', label: 'It is becoming a real, viable business' },
+        { v: 'gifts', label: 'I have started giving their products as gifts to avoid using them' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var f = v.flags || [];
+    var perMonth = v.spent / Math.max(v.months, 1);
+    var obligation = 12;
+    obligation += (10 - v.want) * 3.4;
+    obligation += (10 - v.quality) * 2.6;
+    obligation += v.ask * 2.8;
+    obligation += (10 - v.recip) * 2.4;
+    obligation += v.shift * 2.2;
+    obligation += Math.min(v.launches, 12) * 1.6;
+    if (f.indexOf('mlm') > -1) obligation += 22;
+    if (f.indexOf('guilt') > -1) obligation += 12;
+    if (f.indexOf('gifts') > -1) obligation += 10;
+    if (f.indexOf('improved') > -1) obligation -= 10;
+    if (f.indexOf('paid') > -1) obligation -= 8;
+    if (f.indexOf('real') > -1) obligation -= 12;
+    obligation = Y2K.clamp(obligation, 3, 97);
+
+    var vibe = obligation < 38 ? 'good' : obligation < 62 ? 'mid' : 'bad';
+    var launchesLeft = Math.max(0, Math.round((70 - obligation) / 12));
+
+    var receipts = [
+      { vibe: v.quality >= 7 ? 'good' : 'bad',
+        t: 'Product quality: <b>' + v.quality + '/10</b>; your genuine desire for it: <b>' + v.want + '/10</b>. ' +
+           (v.quality >= 7 && v.want >= 6 ? 'You are a customer, not a donor. This is not the problem you thought it was.'
+            : v.quality >= 7 ? 'Good product, not for you. That is completely fine and you are allowed to say it out loud.'
+            : 'Low quality and low desire. Every purchase has been a donation with a receipt and a scented byproduct.') },
+      { vibe: v.recip >= 6 ? 'good' : 'bad',
+        t: 'Reciprocity: they support your things at <b>' + v.recip + '/10</b> while asking at <b>' + v.ask + '/10</b>. ' +
+           (v.ask - v.recip > 4 ? 'That is the actual grievance. It is not about candles — it is about a friendship that has quietly become one-directional.' : 'Roughly balanced. Support flows both ways.') },
+      { vibe: 'mid',
+        t: 'You have spent <b>' + Y2K.money(v.spent) + '</b> over ' + v.months + ' months — about <b>' + Y2K.money(perMonth) +
+           '/month</b>, or ' + Y2K.money(perMonth * 12) + '/year. Framed as a subscription, would you renew it?' },
+      { vibe: v.shift >= 6 ? 'bad' : 'good',
+        t: v.shift >= 6 ? 'The business has changed how you talk. You have lost a friend and gained a mailing list. That is the real cost here, and no amount of not-buying fixes it.'
+                        : 'You still talk like friends. The business is a topic, not the relationship.' },
+      { vibe: v.friendship >= 7 ? 'good' : 'mid',
+        t: 'Underlying friendship: <b>' + v.friendship + '/10</b>. ' +
+           (v.friendship >= 7 ? 'Strong enough to survive you saying no. Genuinely — this friendship can take it, and treating it as fragile is its own insult.' : 'If the friendship is mostly transactional already, declining costs you very little.') }
+    ];
+    if (f.indexOf('mlm') > -1) receipts.push({ vibe: 'bad',
+      t: '⚠️ MLM structure. Stop now, and not for financial reasons. Continued buying signals viability to someone who is probably losing money, and the recruitment pressure will escalate as long as you look like a yes.' });
+    if (f.indexOf('real') > -1) receipts.push({ vibe: 'good',
+      t: 'It is becoming a real business. That changes the frame entirely — real businesses need honest customers more than loyal ones, and honest feedback is a bigger gift than another purchase.' });
+    if (f.indexOf('gifts') > -1) receipts.push({ vibe: 'bad',
+      t: 'You are regifting their products to avoid using them. This is the moment the support stopped being support and became laundering.' });
+
+    var titles = ['Keep supporting. You genuinely like this.', 'Keep going, buy less, be honest.',
+                  'You are at the natural stopping point.', 'Stop buying. Keep the friend.',
+                  'Stop now, kindly and clearly.'];
+
+    return {
+      score: obligation, vibe: vibe, title: Y2K.pick(titles, obligation),
+      blurb: obligation > 62
+        ? 'You have crossed from customer to obligated party. The purchases are no longer helping them (a friend buying out of guilt is not market signal, it is noise) and they are quietly damaging how you feel about someone you like.'
+        : obligation > 38
+          ? 'You are near the natural end of the enthusiastic phase. This is normal and it does not require a confrontation — it requires you to stop pre-emptively buying at every launch.'
+          : 'You like the product and you like the friend. There is nothing to solve. Buy the candle.',
+      stats: [
+        { k: 'obligation load', v: Math.round(obligation) + '/100' },
+        { k: 'spent to date', v: Y2K.money(v.spent) },
+        { k: 'monthly rate', v: Y2K.money(perMonth) },
+        { k: 'launches you can still skip', v: launchesLeft === 0 ? 'all of them' : '~' + launchesLeft }
+      ],
+      receipts: receipts,
+      advice: obligation > 62
+        ? 'The line that works: "I love that you\'re doing this and I\'m cheering for you — I\'m just done buying for a while." Say it once, warmly, and then hold it without explanation. Nobody has ever lost a real friend to that sentence; several have lost one to years of resentful candle purchases.'
+        : 'Keep buying when you actually want the thing, skip when you do not, and tell them one true thing about the product. That is what a real supporter does.'
+    };
+  }
+});
+</script>
+</body>
+</html>

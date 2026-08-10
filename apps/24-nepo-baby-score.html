@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What's My Personal Nepo-Baby Score?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🧬</text></svg>">
+<style>
+  .pie { display:flex; height:38px; border:3px solid var(--chrome-3); border-radius:999px; overflow:hidden; background:#fff; margin:14px 0 6px; }
+  .pie i { height:100%; transition:width 1s cubic-bezier(.2,.9,.2,1); }
+  .legend { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:6px; font-size:13px; }
+  .legend span { display:flex; align-items:center; gap:6px; }
+  .legend em { width:14px; height:14px; border-radius:3px; border:1px solid rgba(0,0,0,.2); font-style:normal; }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: "What's My Personal Nepo-Baby Score?",
+  emoji: '🧬🎲',
+  file: 'luck_audit',
+  sub: 'Calculates how much of your life came from talent, luck, geography, parents, and <em>introductions</em>.',
+  intro: 'Nobody is 100% self-made. The interesting question is not whether you had help — it is which kind, and whether you can see it.',
+  button: '✧ AUDIT MY LUCK ✧',
+  meterLabel: 'inherited-advantage score',
+  loaderLines: ['GEOCODING YOUR BIRTH ...', 'PRICING YOUR FIRST INTERNSHIP ...', 'ASKING WHO MADE THE PHONE CALL ...'],
+  ticker: 'the luckiest people are the ones who think they were not',
+
+  fields: [
+    { id: 'country', type: 'choice', label: 'Where were you born, economically?',
+      options: [
+        { v: 3, label: 'wealthy country, stable' }, { v: 2, label: 'middle-income country' },
+        { v: 1, label: 'lower-income country' }, { v: 0, label: 'conflict / instability' }
+      ], default: 3 },
+    { id: 'class', type: 'choice', label: 'Household growing up',
+      options: [
+        { v: 0, label: 'struggled for basics' }, { v: 1, label: 'working class, tight' },
+        { v: 2, label: 'comfortable middle' }, { v: 3, label: 'affluent' }, { v: 4, label: 'wealthy' }
+      ], default: 2 },
+    { id: 'education', type: 'choice', label: 'Your education was:',
+      options: [
+        { v: 0, label: 'whatever was nearby, self-funded' }, { v: 1, label: 'public, some family help' },
+        { v: 2, label: 'good schools, family paid' }, { v: 3, label: 'private/elite, fully funded' }
+      ], default: 1 },
+    { id: 'debt', type: 'choice', label: 'You left education with:',
+      options: [
+        { v: 0, label: 'significant debt' }, { v: 1, label: 'some debt' },
+        { v: 2, label: 'none' }, { v: 3, label: 'none, plus a deposit or seed money' }
+      ], default: 1 },
+    { id: 'firstjob', type: 'choice', label: 'How did you get your first real job?',
+      options: [
+        { v: 0, label: 'cold application, no connections' }, { v: 1, label: 'a friend mentioned it' },
+        { v: 2, label: 'a family friend made an introduction' }, { v: 3, label: 'a relative in the industry' },
+        { v: 4, label: 'the family business' }
+      ], default: 1 },
+    { id: 'safety', type: 'choice', label: 'If everything collapsed tomorrow, could you move back home?',
+      options: [
+        { v: 0, label: 'no — there is nowhere' }, { v: 1, label: 'briefly, awkwardly' },
+        { v: 2, label: 'yes, comfortably' }, { v: 3, label: 'yes, indefinitely and well' }
+      ], default: 2 },
+    { id: 'unpaid', type: 'choice', label: 'Have you ever taken an unpaid or badly-paid opportunity that paid off later?',
+      options: [
+        { v: 0, label: 'never could afford to' }, { v: 1, label: 'once, painfully' }, { v: 2, label: 'yes, a few' }
+      ], default: 1 },
+    { id: 'intro', type: 'num', default: 2, min: 0, max: 50, step: 1,
+      label: 'How many career doors opened via someone you already knew?' },
+    { id: 'talent', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How good are you at what you do, relative to peers?', ticks: ['average', 'genuinely exceptional'] },
+    { id: 'work', type: 'slider', min: 0, max: 10, default: 7,
+      label: 'How hard have you worked, honestly?', ticks: ['coasted', 'relentlessly'] },
+    { id: 'timing', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much did timing/luck play a role in your biggest break?',
+      ticks: ['none, all effort', 'right place, right moment'] },
+    { id: 'headwinds', type: 'checks', label: 'Headwinds you have carried',
+      options: [
+        { v: 'first', label: 'First in family to attend university' },
+        { v: 'immigrant', label: 'Immigrant or child of immigrants, starting over' },
+        { v: 'care', label: 'Caring responsibilities while building a career' },
+        { v: 'health', label: 'Chronic illness or disability' },
+        { v: 'discrim', label: 'Discrimination in hiring or promotion' },
+        { v: 'support', label: 'Supported family financially while young' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var h = v.headwinds || [];
+    var inherited =
+      v.country * 4.5 + v.class * 6 + v.education * 5.5 + v.debt * 4.5 +
+      v.firstjob * 5 + v.safety * 5 + v.unpaid * 4 + Math.min(v.intro, 12) * 1.6;
+    inherited = Y2K.clamp(inherited - h.length * 5.5, 2, 98);
+
+    var talentPart = v.talent * 3.2 + v.work * 2.8;
+    var luckPart = v.timing * 3.6;
+    var geoPart = v.country * 4;
+    var parentPart = v.class * 3.4 + v.education * 2.6 + v.debt * 2.4 + v.safety * 2.4;
+    var introPart = v.firstjob * 3.4 + Math.min(v.intro, 12) * 1.5;
+    var sum = talentPart + luckPart + geoPart + parentPart + introPart;
+    var pct = function (x) { return (x / sum) * 100; };
+
+    var slices = [
+      { k: 'talent + effort', v: pct(talentPart), c: '#00d26a' },
+      { k: 'luck / timing',   v: pct(luckPart),   c: '#ffb300' },
+      { k: 'geography',       v: pct(geoPart),    c: '#2a9dff' },
+      { k: 'parents',         v: pct(parentPart), c: '#ff1e9c' },
+      { k: 'introductions',   v: pct(introPart),  c: '#b57edc' }
+    ];
+    var pie = '<div class="subhead">🥧 the breakdown</div><div class="pie">' +
+      slices.map(function (s) { return '<i style="width:' + s.v + '%;background:' + s.c + '"></i>'; }).join('') + '</div>' +
+      '<div class="legend">' + slices.map(function (s) {
+        return '<span><em style="background:' + s.c + '"></em>' + s.k + ' — <b>' + Math.round(s.v) + '%</b></span>';
+      }).join('') + '</div>';
+
+    var earned = Math.round(pct(talentPart));
+    var vibe = inherited > 66 ? 'bad' : inherited > 38 ? 'mid' : 'good';
+
+    var receipts = [
+      { vibe: v.country >= 3 ? 'bad' : 'good',
+        t: 'Birth geography is worth <b>' + Math.round(pct(geoPart)) + '%</b> of your outcome here. ' +
+           (v.country >= 3 ? 'Being born in a stable, wealthy country is the single largest determinant of lifetime income on Earth, and it is decided entirely before you exist.'
+                           : 'You started with geographic headwinds. Everything you have built was built into that.') },
+      { vibe: v.firstjob >= 2 ? 'bad' : 'good',
+        t: v.firstjob >= 3 ? 'Your first real job came through family. That does not mean you were not good — it means the market never got to find out first.'
+           : v.firstjob === 2 ? 'A family friend made the introduction. Introductions are the highest-leverage, least-visible advantage there is: they skip the queue rather than beating it.'
+           : 'You got in cold. Statistically that is the hardest route and it is significantly rarer than people assume.' },
+      { vibe: v.safety >= 2 ? 'bad' : 'good',
+        t: v.safety >= 2 ? 'You have a real safety net. Its main effect is not money — it is risk tolerance. Every bold career move you made was underwritten by a room you could go back to.'
+                         : 'No safety net. Every risk you took was a genuine risk, which means your caution was rational and your boldness was expensive.' },
+      { vibe: v.debt <= 1 ? 'mid' : 'bad',
+        t: v.debt === 3 ? 'You started with capital as well as no debt. That is a decade of compounding handed over at age 22.'
+           : v.debt === 2 ? 'No student debt. Worth roughly a five-year head start on savings versus an indebted peer with identical talent.'
+           : 'You carried debt out of education. That shows up as delayed everything: savings, housing, risk-taking.' },
+      { vibe: 'good',
+        t: 'Talent and effort account for <b>' + earned + '%</b> in this model. ' +
+           (earned < 30 ? 'That is not an insult. Nobody\'s number is high — the model is designed to show how much sits outside the individual, including for people who worked extremely hard.'
+                        : 'A large share, which usually means your advantages were fewer, not that your effort was greater than everyone else\'s.') }
+    ];
+    if (h.length) receipts.push({ vibe: 'good',
+      t: 'You carried <b>' + h.length + ' headwind' + (h.length > 1 ? 's' : '') + '</b>: ' +
+         h.map(function (x) { return ({ first: 'first-gen university', immigrant: 'immigrant start', care: 'caring responsibilities', health: 'chronic illness/disability', discrim: 'discrimination', support: 'supporting family young' })[x]; }).join(', ') +
+         '. We subtracted ' + Math.round(h.length * 5.5) + ' points. Headwinds do not cancel tailwinds — most people have both, and the total is what it is.' });
+
+    var titles = ['Self-made, as far as that phrase ever goes.',
+                  'Mostly self-propelled, with a few doors held open.',
+                  'A normal mix — some help, real effort.',
+                  'Substantially assisted. Comfortably ahead of the start line.',
+                  'Nepo. Warmly, factually, nepo.'];
+
+    return {
+      score: inherited, vibe: vibe, title: Y2K.pick(titles, inherited),
+      blurb: inherited > 66
+        ? 'A large share of your outcome was allocated before you had opinions about it: geography, household, education, and the person who made a phone call. This says nothing about your ability — it says that your ability was given a running start that most equally-able people never get.'
+        : inherited > 38
+          ? 'A normal, mixed picture: real advantages, real effort, and a couple of moments that could have gone differently. Most people are here, and most people describe themselves as self-made anyway.'
+          : 'Genuinely low inherited advantage. You built from a shorter starting position, and the effort-to-outcome ratio in your life is far steeper than it looks from outside.',
+      stats: [
+        { k: 'nepo score', v: Math.round(inherited) + '/100' },
+        { k: 'talent + effort', v: earned + '%' },
+        { k: 'doors via contacts', v: v.intro },
+        { k: 'headwinds', v: h.length }
+      ],
+      receipts: receipts,
+      extra: pie + '<p class="note" style="margin-top:12px">This is a toy model with invented weights. It is directionally useful and numerically meaningless — ' +
+             'like most rankings of human lives.</p>',
+      advice: inherited > 60
+        ? 'The useful move is not guilt, it is inventory: name the three specific doors that were opened for you, then open one of them for someone who has no idea it exists. Introductions cost you nothing and are the most transferable advantage on this list.'
+        : 'Two things: give yourself accurate credit, and notice that your caution was rational rather than a character flaw. Then make one introduction anyway — the people behind you cannot see the door either.'
+    };
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Should I Attend This Wedding?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>💒</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Should I Attend This Wedding?',
+  emoji: '💒✈️',
+  file: 'rsvp_solver',
+  sub: 'Friendship strength, weighed against flights, hotels, gifts, PTO, and the crushing weight of <em>emotional obligation</em>.',
+  intro: 'The RSVP card is not asking a question about money. But the money is asking a question about the friendship.',
+  button: '✧ DECIDE FOR ME ✧',
+  meterLabel: 'the go/no-go score',
+  loaderLines: ['PRICING FLIGHTS FOR A SATURDAY IN JUNE ...', 'CONVERTING PTO INTO REGRET ...', 'CALCULATING WHO WILL NOTICE ...'],
+  ticker: 'you are allowed to decline a wedding. this is legal in every country.',
+
+  fields: [
+    { id: 'who', type: 'choice', label: 'Who is getting married?',
+      options: [
+        { v: 5, label: 'my person — sibling, best friend, ride-or-die' },
+        { v: 4, label: 'close friend I see regularly' },
+        { v: 3, label: 'old close friend, we have drifted' },
+        { v: 2, label: 'good friend of my partner' },
+        { v: 1, label: 'work friend / cousin I like' },
+        { v: 0, label: 'honestly? a numbers invite' }
+      ], default: 3 },
+    { id: 'flights', type: 'num', prefix: '$', default: 420, min: 0, step: 20, label: 'Flights / travel' },
+    { id: 'hotel', type: 'num', prefix: '$', default: 380, min: 0, step: 20, label: 'Hotel + ground transport' },
+    { id: 'gift', type: 'num', prefix: '$', default: 150, min: 0, step: 10, label: 'Gift' },
+    { id: 'extras', type: 'num', prefix: '$', default: 200, min: 0, step: 25,
+      label: 'Outfit, bachelor/ette, shower, pre-parties', hint: 'The line item that quietly doubles everything.' },
+    { id: 'pto', type: 'num', default: 2, min: 0, max: 15, step: 1, label: 'PTO days burned', suffix: 'days' },
+    { id: 'ptovalue', type: 'choice', label: 'How precious is a day of your PTO?',
+      options: [
+        { v: 60, label: 'unlimited-ish, plenty left' },
+        { v: 180, label: 'normal, I plan around it' },
+        { v: 400, label: 'scarce, this is a big chunk of my year' },
+        { v: 700, label: 'this is my only holiday in 2026' }
+      ], default: 180 },
+    { id: 'monthly', type: 'num', prefix: '$', default: 900, min: 0, step: 50,
+      label: 'Your realistic monthly disposable income' },
+    { id: 'inparty', type: 'choice', label: 'Are you in the wedding party?',
+      options: [{ v: 0, label: 'no' }, { v: 1, label: 'yes' }, { v: 2, label: 'yes, and there are several events' }], default: 0 },
+    { id: 'reciprocity', type: 'choice', label: 'Would they come to yours?',
+      options: [
+        { v: 3, label: 'across an ocean, no question' },
+        { v: 2, label: 'yes, if it were easy' },
+        { v: 1, label: 'probably not' },
+        { v: 0, label: 'they did not come to mine' }
+      ], default: 2 },
+    { id: 'joy', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'Honestly — do you want to go?', ticks: ['dreading it', 'genuinely excited'] },
+    { id: 'social', type: 'checks', label: 'Context',
+      options: [
+        { v: 'crowd', label: 'My favorite people will all be there' },
+        { v: 'ex', label: 'Someone I am avoiding will be there' },
+        { v: 'alone', label: 'I would be going alone and knowing nobody' },
+        { v: 'destination', label: 'It is a "destination wedding"' },
+        { v: 'guilt', label: 'Someone has already told me I "have to" come' },
+        { v: 'lastone', label: 'This is one of 4+ weddings for me this year' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var s = v.social || [];
+    var cash = v.flights + v.hotel + v.gift + v.extras + (v.inparty === 1 ? 350 : v.inparty === 2 ? 900 : 0);
+    var ptoCost = v.pto * v.ptovalue;
+    var total = cash + ptoCost;
+    var months = v.monthly > 0 ? cash / v.monthly : 99;
+
+    var bond = v.who * 9 + v.reciprocity * 6 + v.joy * 3.2;
+    if (s.indexOf('crowd') > -1) bond += 10;
+    if (v.inparty >= 1) bond += 8;
+    if (s.indexOf('ex') > -1) bond -= 6;
+    if (s.indexOf('alone') > -1) bond -= 8;
+
+    var burden = months * 14 + (s.indexOf('destination') > -1 ? 8 : 0) + (s.indexOf('lastone') > -1 ? 12 : 0) + v.pto * 2;
+    var score = Y2K.clamp(bond - burden + 30, 3, 97);
+    var vibe = score >= 60 ? 'good' : score >= 38 ? 'mid' : 'bad';
+
+    var titles = [
+      'Decline. Send something thoughtful.',
+      'Decline, and do not feel weird about it.',
+      'Genuinely a toss-up — pick with your gut, not this page.',
+      'Go. It is worth it.',
+      'Go. You would regret missing this one.'
+    ];
+
+    var receipts = [
+      { vibe: months > 1 ? 'bad' : 'good',
+        t: 'Cash cost is <b>' + Y2K.money(cash) + '</b> — that is <b>' + Y2K.round(months, 1) +
+           ' months</b> of your entire disposable income for one weekend.' },
+      { vibe: v.pto >= 3 ? 'bad' : 'mid',
+        t: '<b>' + v.pto + ' PTO days</b> valued at <b>' + Y2K.money(ptoCost) + '</b>. ' +
+           (v.pto >= 3 ? 'Time off is the real currency here and it does not appear on any RSVP card.' : 'Modest time cost.') },
+      { vibe: v.reciprocity >= 2 ? 'good' : 'bad',
+        t: v.reciprocity === 0 ? 'They did not come to yours. You are permitted to weight that heavily — reciprocity is not petty, it is information.'
+           : v.reciprocity === 1 ? 'You do not think they would travel for you. Worth sitting with for ten seconds before you book a flight.'
+           : 'They would show up for you. That is what this whole ritual is actually about and it settles most of the argument.' },
+      { vibe: v.joy >= 7 ? 'good' : v.joy <= 3 ? 'bad' : 'mid',
+        t: 'You rated your actual desire to go at <b>' + v.joy + '/10</b>. ' +
+           (v.joy <= 3 ? 'Every other number on this page is an elaborate way of avoiding this one.' : 'You want to go. Consider that the answer.') },
+      { vibe: s.indexOf('guilt') > -1 ? 'bad' : 'mid',
+        t: s.indexOf('guilt') > -1 ? 'Someone has told you that you "have to" come. Obligation is not a reason, it is a pressure — and it is worth checking whether it came from the couple or from a third party who is enjoying this.'
+                                   : 'No one is guilt-tripping you. Clean decision.' }
+    ];
+    if (s.indexOf('lastone') > -1) receipts.push({ vibe: 'bad',
+      t: 'This is one of four-plus weddings this year. Wedding season for a 30-something now costs more than a used car, and nobody plans for it in aggregate.' });
+    if (v.inparty === 2) receipts.push({ vibe: 'mid',
+      t: 'Wedding party with multiple events: the true cost is roughly ' + Y2K.money(cash * 1.25) + ' once the "small" extras land. Budget for that number, not the one you first thought of.' });
+
+    return {
+      score: score, vibe: vibe, title: Y2K.pick(titles, score),
+      blurb: score < 38
+        ? 'The cost is high, the bond is moderate, and the enthusiasm is not there. "I\'m so sorry, I can\'t make it — I\'d love to take you both to dinner when you\'re back" is a complete sentence and costs ' + Y2K.money(cash * 0.1) + '.'
+        : score < 60
+          ? 'This is genuinely close. When the math ties, go with the version of you that is 70 years old — that one is remarkably consistent about which weddings mattered.'
+          : 'Go. The bond justifies the spend and you actually want to be there, which is the rarest combination on this page.',
+      stats: [
+        { k: 'cash cost', v: Y2K.money(cash) },
+        { k: 'true cost (+PTO)', v: Y2K.money(total) },
+        { k: 'months of disposable', v: Y2K.round(months, 1) },
+        { k: 'verdict', v: score >= 60 ? 'GO' : score >= 38 ? 'COIN FLIP' : 'DECLINE' }
+      ],
+      receipts: receipts,
+      advice: score < 38
+        ? 'Decline early — early declines are gracious, late ones are expensive for the couple. Then actually send the gift and actually make the dinner plan. That is the part people remember.'
+        : 'Book it now; the flights only get worse. And set the budget at ' + Y2K.money(cash * 1.2) + ', because it will be that.'
+    };
+  }
+});
+</script>
+</body>
+</html>
