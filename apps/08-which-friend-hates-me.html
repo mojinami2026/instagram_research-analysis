@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Which Friend Secretly Hates Me?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🕵️</text></svg>">
+<style>
+  .suspects { margin:0; padding:0; list-style:none; }
+  .suspect { background:#fff; border-left:6px solid var(--pink); border-radius:4px; padding:10px 12px; margin-bottom:8px;
+             box-shadow:2px 2px 0 rgba(120,0,90,.15); }
+  .suspect header { display:flex; align-items:baseline; gap:10px; }
+  .suspect header b { font-size:16px; }
+  .suspect header i { margin-left:auto; font-family:'VT323','Courier New',ui-monospace,monospace; font-size:26px; font-style:normal; color:var(--hotpink); }
+  .suspect p { margin:4px 0 0; font-size:13.5px; }
+  .suspect.hot { border-left-color:var(--bad); background:#fff2f5; }
+  .suspect.cool { border-left-color:var(--good); }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+(function () {
+  var SEED = [
+    { n: 'Priya',  c: 1, r: 6, comp: 6, s: 2, dry: 1, dig: 0 },
+    { n: 'Marcus', c: 4, r: 2, comp: 9, s: 7, dry: 6, dig: 2 },
+    { n: 'Jo',     c: 0, r: 8, comp: 5, s: 0, dry: 0, dig: 0 }
+  ];
+  var COLS = [
+    ['n',    'friend',            'text'],
+    ['c',    'cancels on you (last yr)', 'num'],
+    ['r',    'reacts to your posts /10', 'num'],
+    ['comp', 'compliments you /10',      'num'],
+    ['s',    'suspicious silences /10',  'num'],
+    ['dry',  'dry replies /10',          'num'],
+    ['dig',  'backhanded comments (yr)', 'num']
+  ];
+
+  function rowHTML(r) {
+    return '<tr>' + COLS.map(function (c) {
+      return '<td' + (c[0] === 'n' ? '' : ' style="width:88px"') + '><input data-col="' + c[0] + '"' +
+        (c[2] === 'num' ? ' type="number" min="0" step="1"' : ' placeholder="name"') +
+        ' value="' + Y2K.esc(r[c[0]]) + '"></td>';
+    }).join('') + '</tr>';
+  }
+
+  Y2K.app({
+    title: 'Which Friend Secretly Hates Me?',
+    emoji: '🕵️‍♀️🔪',
+    file: 'suspect_board',
+    sub: 'Cancellations, reaction patterns, compliment quality, and the most damning variable of all: <em>suspicious silence</em>.',
+    intro: 'Add your friends below. Everything stays in your browser, which is good, because this is an unhinged thing to have written down.',
+    button: '✧ NAME A SUSPECT ✧',
+    meterLabel: 'peak hostility score across your friend group',
+    loaderLines: ['DUSTING REACTIONS FOR PRINTS ...', 'MEASURING SILENCE DENSITY ...', 'THIS IS NOT EVIDENCE. THIS IS A WEBSITE ...'],
+    ticker: 'reminder: people are busy. busy looks exactly like hostile.',
+
+    fields: [
+      { type: 'html', html:
+        '<div class="field"><span class="field__legend">The suspect board' +
+        '<span class="field__hint">Rate 0–10 unless it says otherwise. "Suspicious silence" = they see it, they say nothing, and you notice.</span></span>' +
+        '<div class="tablewrap"><table class="table"><thead><tr>' +
+        COLS.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') +
+        '</tr></thead><tbody id="rows">' + SEED.map(rowHTML).join('') + '</tbody></table></div>' +
+        '<div class="btnrow" style="margin-top:8px">' +
+        '<button type="button" class="btn btn--ghost" id="addrow">+ add suspect</button>' +
+        '<button type="button" class="btn btn--ghost" id="delrow">– remove last</button></div></div>' },
+      { id: 'mood', type: 'slider', min: 0, max: 10, default: 5,
+        label: 'How anxious are you feeling today, honestly?',
+        hint: 'This is used to calibrate. High anxiety inflates every reading on this page and we will say so.',
+        ticks: ['calm', 'spiralling'] },
+      { id: 'change', type: 'choice', label: 'Has anything actually changed recently?',
+        options: [
+          { v: 0, label: 'no, this is a vibe' },
+          { v: 1, label: 'someone got busy/new job/new baby' },
+          { v: 2, label: 'there was a specific awkward incident' },
+          { v: 3, label: 'I did something I have not apologized for' }
+        ], default: 0 }
+    ],
+
+    collect: function (form) {
+      var people = [];
+      form.querySelectorAll('#rows tr').forEach(function (tr) {
+        var o = {};
+        COLS.forEach(function (c) {
+          var el = tr.querySelector('[data-col="' + c[0] + '"]');
+          o[c[0]] = c[2] === 'num' ? (parseFloat(el.value) || 0) : el.value.trim();
+        });
+        if (o.n) people.push(o);
+      });
+      return { people: people };
+    },
+
+    onMount: function (form) {
+      var body = form.querySelector('#rows');
+      form.querySelector('#addrow').addEventListener('click', function () {
+        body.insertAdjacentHTML('beforeend', rowHTML({ n: '', c: 0, r: 5, comp: 5, s: 0, dry: 0, dig: 0 }));
+      });
+      form.querySelector('#delrow').addEventListener('click', function () {
+        if (body.children.length > 1) body.lastElementChild.remove();
+      });
+    },
+
+    compute: function (v) {
+      var people = v.people || [];
+      if (!people.length) {
+        return { score: 20, scoreText: '0', vibe: 'good', title: 'You have listed zero friends',
+          blurb: 'Either everyone is safe or we have found a much bigger problem.',
+          advice: 'Put a name in the first column.' };
+      }
+
+      var anxietyInflation = (v.mood - 5) * 2.2;
+      people.forEach(function (p) {
+        var raw =
+          Math.min(p.c, 12) * 3.4 +
+          p.s * 3.6 +
+          p.dry * 2.8 +
+          Math.min(p.dig, 8) * 5.2 +
+          (10 - Y2K.clamp(p.r, 0, 10)) * 1.9 +
+          (10 - Y2K.clamp(p.comp, 0, 10)) * 1.4;
+        p.score = Y2K.clamp(raw - 8, 0, 100);
+        p.adj = Y2K.clamp(p.score - anxietyInflation, 0, 100);
+      });
+      people.sort(function (a, b) { return b.adj - a.adj; });
+
+      var top = people[0];
+      var second = people[1];
+      var gap = second ? top.adj - second.adj : top.adj;
+      var avg = people.reduce(function (a, p) { return a + p.adj; }, 0) / people.length;
+
+      var board = '<div class="subhead">🔎 the board, ranked</div><ul class="suspects">' +
+        people.map(function (p) {
+          var cls = p.adj > 55 ? 'hot' : p.adj < 25 ? 'cool' : '';
+          var why = [];
+          if (p.dig >= 2) why.push('<b>' + p.dig + '</b> backhanded comments — the only item on this list that is genuinely hard to do by accident');
+          if (p.s >= 6) why.push('silence score <b>' + p.s + '/10</b>');
+          if (p.c >= 3) why.push('<b>' + p.c + '</b> cancellations');
+          if (p.dry >= 6) why.push('dry replies <b>' + p.dry + '/10</b>');
+          if (p.r <= 3) why.push('near-zero reactions');
+          if (!why.length) why.push('nothing incriminating. genuinely. leave them alone');
+          return '<li class="suspect ' + cls + '"><header><b>' + Y2K.esc(p.n) + '</b><i>' + Math.round(p.adj) + '</i></header>' +
+            '<p>' + why.join(' · ') + '</p></li>';
+        }).join('') + '</ul>';
+
+      var vibe = top.adj > 58 ? 'bad' : top.adj > 34 ? 'mid' : 'good';
+      var receipts = [
+        { vibe: vibe,
+          t: 'Top suspect: <b>' + Y2K.esc(top.n) + '</b> at <b>' + Math.round(top.adj) + '/100</b>' +
+             (gap > 18 ? ', clear of the field by ' + Math.round(gap) + ' points. That separation is the only thing here worth taking semi-seriously.'
+                       : '. But the field is bunched within ' + Math.round(gap) + ' points, which usually means the pattern is you, not them.') },
+        { vibe: v.mood >= 7 ? 'bad' : 'good',
+          t: 'You rated your anxiety <b>' + v.mood + '/10</b>. ' +
+             (v.mood >= 7 ? 'We subtracted ' + Math.round(anxietyInflation) + ' points from every score to compensate. On a calm day this page would have named nobody.'
+                          : 'Calm baseline, so these readings are as trustworthy as a quiz about your friends can be. Which is: barely.') },
+        { vibe: v.change === 1 ? 'good' : v.change >= 2 ? 'bad' : 'mid',
+          t: v.change === 0 ? 'Nothing has actually changed. You are pattern-matching on noise, and noise always produces a suspect.'
+             : v.change === 1 ? 'Someone got busy. Busy is the single most common cause of every symptom on this board and it is not about you.'
+             : v.change === 2 ? 'There was a specific incident. That is a real, addressable thing, unlike everything else on this page.'
+             : 'You did something you have not apologized for. You did not need a website for this one.' },
+        { vibe: avg > 45 ? 'bad' : 'good',
+          t: 'Group average hostility: <b>' + Math.round(avg) + '/100</b>. ' +
+             (avg > 45 ? 'When everyone scores high, the shared variable is you — usually as the person who needs more contact than this group provides. That is a compatibility gap, not hatred.'
+                       : 'Low across the board. Your friends are fine.') }
+      ];
+
+      return {
+        score: top.adj, vibe: vibe,
+        title: top.adj > 58 ? 'The board says ' + Y2K.esc(top.n) + '.' :
+               top.adj > 34 ? 'Nobody hates you. ' + Y2K.esc(top.n) + ' might be annoyed.' :
+               'Nobody hates you. Not even slightly.',
+        blurb: top.adj > 58
+          ? 'One person is meaningfully above the rest. Before you act on that: every input here is also a perfect description of someone going through something they have not told you about.'
+          : 'The scores are low and clustered, which is what a normal friend group looks like from the inside on a bad night.',
+        stats: [
+          { k: 'suspects', v: people.length },
+          { k: 'top score', v: Math.round(top.adj) },
+          { k: 'gap to 2nd', v: second ? Math.round(gap) : 'n/a' },
+          { k: 'anxiety adjustment', v: (anxietyInflation >= 0 ? '−' : '+') + Math.abs(Math.round(anxietyInflation)) }
+        ],
+        receipts: receipts,
+        extra: board + '<p class="note" style="margin-top:12px">Do not confront anyone with this. If you genuinely want to know, the working version is: ' +
+               '"hey, feels like we\'ve been off lately — are we good?" It has a 90% success rate and requires no spreadsheet.</p>',
+        advice: top.adj > 58
+          ? 'Ask ' + Y2K.esc(top.n) + ' directly and casually. If they say "I\'ve been drowning at work," believe them the first time.'
+          : 'Close the tab, text the person you miss most, and do not mention that you built a suspect board.'
+      };
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Will This Situationship Ruin My Life?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🌪️</text></svg>">
+<style>
+  .forecast { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-top:8px; }
+  .day { background:#fff; border:2px solid var(--lilac); border-radius:6px; padding:10px; text-align:center; box-shadow:2px 2px 0 rgba(120,0,90,.2); }
+  .day b { display:block; font-size:13px; }
+  .day .ico { font-size:30px; line-height:1.2; }
+  .day span { font-size:12px; opacity:.85; }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Will This Situationship Ruin My Life?',
+  emoji: '🌪️🚩',
+  file: 'red_flag_radar',
+  sub: 'A red-flag forecast with a <em>projected recovery time</em>, because the second one is the number you actually came for.',
+  intro: 'Situationship: a relationship with all the emotional exposure and none of the structural guarantees. You know this. You are here anyway.',
+  button: '✧ FORECAST THE DAMAGE ✧',
+  meterLabel: 'projected life disruption',
+  loaderLines: ['SCANNING FOR STORM SYSTEMS ...', 'MODELLING 6 MONTHS OF "we\'ll see" ...', 'ESTIMATING RECOVERY IN CALENDAR MONTHS ...'],
+  ticker: 'a situationship is a relationship where only one person is allowed to be surprised',
+
+  fields: [
+    { id: 'months', type: 'num', default: 5, min: 0, max: 120, step: 1, label: 'How many months has this been going?', suffix: 'mo' },
+    { id: 'defined', type: 'choice', label: 'Definition status',
+      options: [
+        { v: 0, label: 'we defined it and it is genuinely casual for both of us' },
+        { v: 1, label: 'undefined, and neither of us minds' },
+        { v: 2, label: 'undefined, and I mind' },
+        { v: 3, label: 'defined as "nothing serious" — by them, to me' }
+      ], default: 2 },
+    { id: 'invested', type: 'slider', min: 0, max: 10, default: 7,
+      label: 'How emotionally invested are YOU?', ticks: ['barely', 'fully'] },
+    { id: 'them', type: 'slider', min: 0, max: 10, default: 4,
+      label: 'How invested are THEY, in your honest estimate?', ticks: ['barely', 'fully'] },
+    { id: 'hope', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How much of your happiness this month depended on their behavior?',
+      ticks: ['none of it', 'most of it'] },
+    { id: 'other', type: 'choice', label: 'Are they seeing other people?',
+      options: [
+        { v: 0, label: 'no, and we discussed it' }, { v: 1, label: 'no, I think' },
+        { v: 2, label: 'yes, and I knew' }, { v: 3, label: 'yes, and I found out' }
+      ], default: 1 },
+    { id: 'exit', type: 'choice', label: 'What would happen if you ended it today?',
+      options: [
+        { v: 0, label: 'I would be fine in a week' },
+        { v: 1, label: 'rough month, then fine' },
+        { v: 2, label: 'genuinely bad for a while' },
+        { v: 3, label: 'I am not sure I could do it' }
+      ], default: 2 },
+    { id: 'cost', type: 'checks', label: 'What has this already cost you?',
+      options: [
+        { v: 'dating', label: 'I have turned down other people for this' },
+        { v: 'sleep', label: 'It affects my sleep' },
+        { v: 'work', label: 'It affects my work or focus' },
+        { v: 'friends', label: 'My friends are visibly tired of hearing about it' },
+        { v: 'moved', label: 'I have changed plans/location/job around them' },
+        { v: 'self', label: 'I say things I do not mean to keep it stable' },
+        { v: 'good', label: 'Genuinely, most weeks it makes my life better' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var c = v.cost || [];
+    var asym = Math.max(0, v.invested - v.them);
+    var risk = 8;
+    risk += asym * 7.5;
+    risk += v.defined * 7;
+    risk += v.hope * 3.4;
+    risk += v.other * 4;
+    risk += v.exit * 7;
+    risk += Math.min(v.months, 24) * 0.85;
+    if (c.indexOf('dating') > -1) risk += 6;
+    if (c.indexOf('sleep') > -1) risk += 6;
+    if (c.indexOf('work') > -1) risk += 7;
+    if (c.indexOf('friends') > -1) risk += 5;
+    if (c.indexOf('moved') > -1) risk += 9;
+    if (c.indexOf('self') > -1) risk += 8;
+    if (c.indexOf('good') > -1) risk -= 12;
+    risk = Y2K.clamp(risk, 3, 98);
+
+    // recovery: roughly half the duration, scaled by investment asymmetry and exit difficulty
+    var recovery = Y2K.clamp((v.months * 0.5) * (1 + asym * 0.12) * (1 + v.exit * 0.18) + v.invested * 0.35, 0.5, 36);
+    var vibe = risk >= 62 ? 'bad' : risk >= 38 ? 'mid' : 'good';
+
+    var stages = [
+      { b: 'Month 1', i: risk > 60 ? '⛈️' : risk > 38 ? '🌦️' : '⛅', s: risk > 60 ? 'the same, but you check your phone more' : 'steady, low drama' },
+      { b: 'Month 3', i: risk > 60 ? '🌪️' : risk > 38 ? '⛈️' : '🌤️', s: risk > 60 ? 'one big conversation, no change' : risk > 38 ? 'the "what are we" conversation' : 'still fine, still light' },
+      { b: 'Month 6', i: risk > 60 ? '🌊' : risk > 38 ? '🌦️' : '☀️', s: risk > 60 ? 'ends abruptly or quietly rots' : risk > 38 ? 'resolves in one direction' : 'either real or done, cleanly' },
+      { b: 'Recovery', i: '🌱', s: Y2K.round(recovery, 1) + ' months' }
+    ];
+    var fc = '<div class="subhead">🌦 the forecast</div><div class="forecast">' +
+      stages.map(function (s) { return '<div class="day"><b>' + s.b + '</b><div class="ico">' + s.i + '</div><span>' + s.s + '</span></div>'; }).join('') +
+      '</div>';
+
+    var receipts = [
+      { vibe: asym >= 3 ? 'bad' : 'good',
+        t: 'Investment asymmetry: you <b>' + v.invested + '/10</b> vs them <b>' + v.them + '/10</b>' +
+           (asym >= 3 ? '. A gap of ' + asym + ' points is the entire engine of this situation. Everything painful downstream comes from here.' : '. Roughly matched, which is why this is probably survivable.') },
+      { vibe: v.hope >= 7 ? 'bad' : 'good',
+        t: 'Your month\'s happiness was <b>' + v.hope * 10 + '%</b> dependent on their behavior. ' +
+           (v.hope >= 7 ? 'You have outsourced your mood to someone who has not agreed to hold it.' : 'You are still the main character of your own week. Protect that.') },
+      { vibe: v.defined >= 2 ? 'bad' : 'good',
+        t: v.defined === 3 ? 'They defined it as "nothing serious" — out loud, to you. People are almost never lying when they undersell their intentions.'
+           : v.defined === 2 ? 'It is undefined and you mind. Undefined only works when it works for both people, and it is currently working for one.'
+           : 'Undefined but genuinely mutual, or defined and mutual. That is a real arrangement, not a situationship.' },
+      { vibe: c.indexOf('moved') > -1 ? 'bad' : 'mid',
+        t: c.indexOf('moved') > -1 ? '⚠️ You have restructured actual life logistics around an undefined arrangement. This is the highest-weighted item in the entire model.'
+                                   : 'No major life logistics reorganized around them. Your downside is contained.' },
+      { vibe: c.indexOf('good') > -1 ? 'good' : 'mid',
+        t: c.indexOf('good') > -1 ? 'Most weeks this makes your life better. That deserves real weight — not every undefined thing is a wound, and a good six months is a good six months.'
+                                  : 'You did not tick "it makes my life better." That omission is doing a lot of quiet talking.' }
+    ];
+
+    var titles = ['No. This is fine, actually.', 'No, but it will cost you a season.', 'It will not ruin your life. It will dominate a chapter of it.',
+                  'It is already taking more than it gives.', 'It will not ruin your life — but it is currently renting most of it.'];
+
+    return {
+      score: risk, vibe: vibe, title: Y2K.pick(titles, risk),
+      blurb: risk >= 62
+        ? 'Nothing here ruins a life — that framing is what keeps people in these. What it does is consume attention, sleep, and optionality at a rate you would never accept if it were billed monthly. Projected recovery is <b>' + Y2K.round(recovery, 1) + ' months</b> after it ends, and it will end.'
+        : risk >= 38
+          ? 'Moderate exposure. This is the zone where people wait, and waiting is the most expensive option because it costs the same as leaving but takes longer.'
+          : 'Low risk. You are clear-eyed, roughly matched in investment, and your life still belongs to you. Enjoy it.',
+      stats: [
+        { k: 'disruption score', v: Math.round(risk) },
+        { k: 'recovery time', v: Y2K.round(recovery, 1) + ' mo' },
+        { k: 'investment gap', v: asym + ' pts' },
+        { k: 'months invested', v: v.months }
+      ],
+      receipts: receipts,
+      extra: fc,
+      advice: risk >= 62
+        ? 'Set a date. Literally, on a calendar, four weeks out: "if nothing has changed by then, I stop." You do not need to announce it. Deadlines you keep privately are the only ones that work in situationships, because the other person has no incentive to set one.'
+        : risk >= 38
+          ? 'Ask the direct question once. Not to change their answer — to stop paying for the ambiguity.'
+          : 'Carry on. Check back if the investment gap widens.'
+    };
+  }
+});
+</script>
+</body>
+</html>

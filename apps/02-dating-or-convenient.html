@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Are We Dating or Am I Just Convenient?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🚌</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Are We Dating or Am I Just Convenient?',
+  emoji: '🚌💔',
+  file: 'proximity_check',
+  sub: 'We score effort, response time, planning, and — the big one — <em>who always travels farther</em>.',
+  intro: 'Convenience feels like affection right up until the commute changes.',
+  button: '✧ MEASURE THE EFFORT ✧',
+  meterLabel: 'effort symmetry — high means it is mutual, low means it is geography',
+  loaderLines: ['MAPPING TRAVEL DISTANCES ...', 'TIMESTAMPING EVERY "hey" ...', 'DIVIDING PLANS BY PLANNER ...'],
+  ticker: 'proximity is not romance. proximity is a bus route.',
+
+  fields: [
+    { id: 'travel', type: 'slider', min: 0, max: 100, step: 5, default: 50,
+      label: 'Of the total distance travelled to see each other, what % do you cover?',
+      hint: 'Include the "I\'ll just come to you, it\'s easier" trips.',
+      ticks: ['0% — they always come', '100% — I always go'] },
+    { id: 'plan', type: 'slider', min: 0, max: 100, step: 5, default: 50,
+      label: 'What % of plans do you initiate?', ticks: ['0% — all them', '100% — all me'] },
+    { id: 'reply', type: 'choice', label: 'Typical reply time to a normal message',
+      options: [
+        { v: 0, label: '⚡ minutes' }, { v: 1, label: '🕐 a few hours' },
+        { v: 2, label: '🌙 next day' }, { v: 3, label: '📅 when they need something' }
+      ], default: 1 },
+    { id: 'notice', type: 'choice', label: 'How far ahead do plans get made?',
+      options: [
+        { v: 0, label: 'days or weeks ahead' }, { v: 1, label: 'the morning of' },
+        { v: 2, label: 'after 9pm, same day' }, { v: 3, label: '"you up"' }
+      ], default: 1 },
+    { id: 'when', type: 'choice', label: 'When do you usually see each other?',
+      options: [
+        { v: 0, label: 'daytime, weekends, out in public' },
+        { v: 1, label: 'weeknight dinners' },
+        { v: 2, label: 'late evenings at one of our places' },
+        { v: 3, label: 'exclusively after other plans end' }
+      ], default: 1 },
+    { id: 'quality', type: 'slider', min: 0, max: 10, default: 7,
+      label: 'When you ARE together, how good is it?', ticks: ['fine', 'transcendent'] },
+    { id: 'cancel', type: 'slider', min: 0, max: 10, default: 2,
+      label: 'How often do they cancel or reschedule on you?', ticks: ['never', 'constantly'] },
+    { id: 'signs', type: 'checks', label: 'Check what is true',
+      options: [
+        { v: 'friends', label: 'You have met their friends' },
+        { v: 'daytime', label: 'You have done a boring daytime errand together' },
+        { v: 'future', label: 'They make plans more than a month out with you in them' },
+        { v: 'sick', label: 'They have taken care of you when you were unwell' },
+        { v: 'photos', label: 'You exist on their phone in photos, not just texts' },
+        { v: 'moved', label: 'They have gone out of their way when it was genuinely inconvenient' },
+        { v: 'nearby', label: 'You live extremely close to each other' },
+        { v: 'sameoffice', label: 'You work together / share a commute / same building' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var s = v.signs || [];
+    var score = 62;
+    score -= (v.travel - 50) * 0.42;
+    score -= (v.plan - 50) * 0.34;
+    score -= v.reply * 6;
+    score -= v.notice * 6.5;
+    score -= v.when * 5.5;
+    score -= v.cancel * 2.6;
+    score += (v.quality - 6) * 1.2;
+    if (s.indexOf('friends') > -1) score += 7;
+    if (s.indexOf('daytime') > -1) score += 8;
+    if (s.indexOf('future') > -1) score += 10;
+    if (s.indexOf('sick') > -1) score += 7;
+    if (s.indexOf('photos') > -1) score += 4;
+    if (s.indexOf('moved') > -1) score += 9;
+    if (s.indexOf('nearby') > -1) score -= 5;
+    if (s.indexOf('sameoffice') > -1) score -= 6;
+    score = Y2K.clamp(score, 3, 97);
+
+    var convenience = 100 - score;
+    var vibe = score >= 62 ? 'good' : score >= 42 ? 'mid' : 'bad';
+    var titles = [
+      'You are the closest warm option.',
+      'You are convenient, and they are fond of you. In that order.',
+      'Somewhere between dating and a habit.',
+      'You are dating, with some lazy patches.',
+      'You are dating. Genuinely. Go enjoy it.'
+    ];
+
+    var receipts = [];
+    receipts.push({ vibe: v.travel > 65 ? 'bad' : v.travel < 40 ? 'good' : 'mid',
+      t: 'You cover <b>' + v.travel + '%</b> of the distance. ' +
+         (v.travel > 65 ? 'Distance travelled is the least fakeable measure of interest there is. It costs time, and time is the only thing nobody has extra of.'
+                        : 'Travel is roughly balanced, which quietly settles most of this question.') });
+    receipts.push({ vibe: v.plan > 70 ? 'bad' : 'good',
+      t: 'You initiate <b>' + v.plan + '%</b> of plans. ' +
+         (v.plan > 70 ? 'Try the two-week experiment: initiate nothing and see whether a plan appears. It is brutal and it is definitive.'
+                      : 'Initiation is shared. Somebody else also wants to see you.') });
+    receipts.push({ vibe: v.notice >= 2 ? 'bad' : 'good',
+      t: v.notice >= 2 ? 'Plans arrive same-day and late. Advance notice is what people give things they are protecting on a calendar.'
+                       : 'You get real advance notice. That means you occupy space in their week before the week starts.' });
+    receipts.push({ vibe: v.when >= 2 ? 'bad' : 'good',
+      t: v.when >= 2 ? 'You are mostly a night-time, indoors event. Daylight is where relationships get confirmed.'
+                     : 'You see each other in daylight and in public. Small thing, enormous signal.' });
+    if (s.indexOf('moved') > -1) receipts.push({ vibe: 'good', t: 'They have been genuinely inconvenienced for you and did it anyway. This outranks almost everything else on this page.' });
+    if (s.indexOf('future') > -1) receipts.push({ vibe: 'good', t: 'They have put you in a plan a month out. People do not book the future with someone they consider temporary.' });
+    if (s.indexOf('nearby') > -1 && v.travel > 55) receipts.push({ vibe: 'bad', t: 'You live very close AND you still do most of the travelling. That is remarkable, and not in a good way.' });
+    if (s.indexOf('sameoffice') > -1) receipts.push({ vibe: 'mid', t: 'Shared building or commute inflates every metric here. Subtract accordingly — a relationship that requires zero logistics has never been tested.' });
+    if (v.quality >= 8 && score < 45) receipts.push({ vibe: 'mid', t: 'The time together rates ' + v.quality + '/10, which is exactly why this is confusing. Quality of presence and consistency of effort are different variables, and you have one of them.' });
+
+    return {
+      score: score, vibe: vibe, title: Y2K.pick(titles, score),
+      blurb: score < 42
+        ? 'The effort in this arrangement is flowing in one direction and it is yours. That does not mean they do not like you — it means liking you has not cost them anything yet.'
+        : score < 62
+          ? 'Real affection, lazy logistics. This is fixable, but only by the other person, and only if asked directly.'
+          : 'Effort is mutual, plans are real, and daylight is involved. You are dating. Stop auditing it.',
+      stats: [
+        { k: 'convenience index', v: Math.round(convenience) },
+        { k: 'your share of travel', v: v.travel + '%' },
+        { k: 'your share of planning', v: v.plan + '%' },
+        { k: 'green flags', v: s.filter(function (x) { return ['friends','daytime','future','sick','photos','moved'].indexOf(x) > -1; }).length + '/6' }
+      ],
+      receipts: receipts,
+      advice: score < 42
+        ? 'Change one variable: stop travelling farther. Suggest the midpoint, or their side, once. The answer to that one message is the whole report.'
+        : score < 62
+          ? 'Say the sentence out loud: "I would like plans more than a day in advance." Watch what happens. Adults can hear that.'
+          : 'Nothing. Close the laptop. You are fine.'
+    };
+  }
+});
+</script>
+</body>
+</html>

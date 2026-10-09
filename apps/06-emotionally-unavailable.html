@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Is He Emotionally Unavailable or Just Not That Into Me?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🧊</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Is He Emotionally Unavailable or Just Not That Into Me?',
+  emoji: '🧊🚩',
+  file: 'diagnostic',
+  sub: 'A diagnostic quiz with <em>increasingly uncomfortable</em> evidence. There is a third option and you already suspect what it is.',
+  intro: 'Emotionally unavailable = cannot do it with anyone. Not that into you = can, but not with you. The tell is whether they do it with other people.',
+  button: '✧ DIAGNOSE ME ✧',
+  meterLabel: '0 = they are unavailable to everyone · 100 = they are available, just not to you',
+  loaderLines: ['CROSS-REFERENCING WITH THEIR EX ...', 'SEARCHING FOR EVIDENCE OF INTERIORITY ...', 'PREPARING SOMETHING YOU WILL NOT ENJOY ...'],
+  ticker: 'the third option is that both are true and it does not matter which',
+
+  fields: [
+    { id: 'others', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'With their friends and family, how emotionally open are they?',
+      hint: 'This is the most diagnostic question on the page. Answer it carefully.',
+      ticks: ['a locked door', 'genuinely warm and open'] },
+    { id: 'ex', type: 'choice', label: 'What do you know about their last serious relationship?',
+      options: [
+        { v: 0, label: 'they have never had one' },
+        { v: 1, label: 'it ended badly and they will not discuss it' },
+        { v: 2, label: 'they talk about it like a normal human event' },
+        { v: 3, label: 'they were visibly, deeply in love and everyone knew' }
+      ], default: 1 },
+    { id: 'depth', type: 'slider', min: 0, max: 10, default: 3,
+      label: 'How do they respond when you bring up something real?',
+      ticks: ['deflects, jokes, changes topic', 'meets you there' ] },
+    { id: 'consistency', type: 'slider', min: 0, max: 10, default: 4,
+      label: 'How consistent are they week to week?',
+      ticks: ['hot then gone', 'boringly reliable'] },
+    { id: 'labels', type: 'choice', label: 'When you have tried to define things:',
+      options: [
+        { v: 0, label: 'I have never dared bring it up' },
+        { v: 1, label: 'they went vague and the subject moved' },
+        { v: 2, label: 'they said they "aren\'t ready" — for anyone' },
+        { v: 3, label: 'they said they don\'t want that WITH ME' },
+        { v: 4, label: 'we defined it and it is fine' }
+      ], default: 1 },
+    { id: 'effort', type: 'slider', min: 0, max: 10, default: 3,
+      label: 'How much logistical effort do they put in?',
+      ticks: ['zero', 'plans things, remembers things'] },
+    { id: 'public', type: 'slider', min: 0, max: 10, default: 4,
+      label: 'How much do they integrate you into their actual life?',
+      ticks: ['I am a secret', 'fully woven in'] },
+    { id: 'evidence', type: 'checks', label: 'The uncomfortable evidence section',
+      hint: 'Tick everything that is true. Nobody can see this.',
+      options: [
+        { v: 'busy', label: 'They are "so busy" but you know what they did last weekend' },
+        { v: 'quickother', label: 'They have moved fast with someone else before' },
+        { v: 'therapy', label: 'They have named their own patterns unprompted' },
+        { v: 'apology', label: 'They have apologized for hurting you, specifically and without being asked' },
+        { v: 'crisis', label: 'They showed up during a genuine crisis of yours' },
+        { v: 'onlylate', label: 'Contact is overwhelmingly late-night' },
+        { v: 'youchase', label: 'If you stopped texting, contact would end entirely' },
+        { v: 'toldyou', label: 'They have literally told you they cannot give you what you want' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var e = v.evidence || [];
+
+    // "unavailable" = flat with everyone. "not into you" = capable, selectively withholding.
+    var capable = v.others * 1.5 + v.ex * 2.2;
+    if (e.indexOf('quickother') > -1) capable += 8;
+    if (e.indexOf('therapy') > -1) capable += 3;
+    if (e.indexOf('apology') > -1) capable += 4;
+    if (e.indexOf('crisis') > -1) capable += 5;
+
+    var withheld = (10 - v.depth) * 1.1 + (10 - v.effort) * 1.2 + (10 - v.public) * 1.2 + (10 - v.consistency) * 0.9;
+    if (v.labels === 3) withheld += 12;
+    if (v.labels <= 1) withheld += 5;
+    if (e.indexOf('busy') > -1) withheld += 6;
+    if (e.indexOf('onlylate') > -1) withheld += 5;
+    if (e.indexOf('youchase') > -1) withheld += 8;
+    if (v.labels === 4) withheld -= 14;
+
+    var score = Y2K.clamp(30 + capable * 1.15 + (withheld - 20) * 0.5, 3, 97);   // high = "into someone, not you"
+    var pain = Y2K.clamp(withheld * 1.4, 0, 100);
+    var vibe = (v.labels === 4 && withheld < 20) ? 'good' : pain > 55 ? 'bad' : 'mid';
+
+    var dx = score > 66 ? 'Not that into you.' :
+             score > 42 ? 'Both, in a way that is impossible to separate from the outside.' :
+             'Genuinely emotionally unavailable — to everyone, not just you.';
+
+    var receipts = [];
+    receipts.push({ vibe: v.others >= 7 ? 'bad' : 'mid',
+      t: 'With everyone else they score <b>' + v.others + '/10</b> on openness. ' +
+         (v.others >= 7 ? 'A person who is warm with their friends and flat with you is not incapable of intimacy. They are budgeting it.'
+                        : 'Low across the board, which is at least consistent. Consistency is not a relationship, but it is not a rejection either.') });
+    if (e.indexOf('quickother') > -1) receipts.push({ vibe: 'bad',
+      t: 'They have moved fast with someone else before. "I\'m not ready for a relationship" has an unspoken second half and you know what it is.' });
+    if (e.indexOf('toldyou') > -1) receipts.push({ vibe: 'bad',
+      t: '⚠️ They told you directly that they cannot give you what you want. Everything else on this page is a rounding error. People rarely lie in that specific direction.' });
+    receipts.push({ vibe: v.depth >= 7 ? 'good' : 'bad',
+      t: 'Depth response: <b>' + v.depth + '/10</b>. ' +
+         (v.depth >= 7 ? 'They can meet you in a real conversation, which is the actual definition of available.'
+                       : 'Deflection, jokes, subject changes. Whether that is fear or disinterest, you experience it identically.') });
+    receipts.push({ vibe: v.consistency >= 7 ? 'good' : 'bad',
+      t: 'Consistency: <b>' + v.consistency + '/10</b>. ' + (v.consistency < 5 ? 'Intermittent reward is the most addictive schedule known to psychology. The confusion is not a bug in you.' : 'Reliable. Rare. Valuable.') });
+    if (e.indexOf('youchase') > -1) receipts.push({ vibe: 'bad',
+      t: 'If you stopped texting, this would end. That is not a relationship, that is you running a relationship-shaped service for one customer.' });
+    if (e.indexOf('crisis') > -1) receipts.push({ vibe: 'good',
+      t: 'They showed up during a real crisis. Hold onto that as a genuine data point — it does not fix the rest, but it is not nothing.' });
+    if (v.labels === 4) receipts.push({ vibe: 'good', t: 'You defined the relationship and it held. Most of this quiz does not apply to you. Go outside.' });
+
+    return {
+      score: score, vibe: vibe,
+      title: dx,
+      blurb: score > 66
+        ? 'The evidence says they are capable of the thing you want. They have done it, with other people, recently enough that you know about it. That is the uncomfortable part, and it is also the useful part: this is not a puzzle you can solve by being more patient.'
+        : score > 42
+          ? 'You are stuck in the genuinely worst version, where both explanations fit every piece of evidence. Here is the reframe: the diagnosis does not change your options. Available-but-not-to-you and unavailable-to-everyone produce the exact same Tuesday night for you.'
+          : 'This looks like a person who is closed to everyone, which means it is not a referendum on you. It also means waiting for it to open is a bet on someone else\'s interior renovation timeline, with no completion date.',
+      stats: [
+        { k: 'capability signal', v: Math.round(Y2K.clamp(capable * 2.2, 0, 100)) },
+        { k: 'withholding signal', v: Math.round(pain) },
+        { k: 'red flags ticked', v: e.filter(function (x) { return ['busy','quickother','onlylate','youchase','toldyou'].indexOf(x) > -1; }).length + '/5' },
+        { k: 'diagnosis', v: score > 66 ? 'not you' : score > 42 ? 'both' : 'unavailable' }
+      ],
+      receipts: receipts,
+      advice: v.labels === 4
+        ? 'Genuinely: nothing. You have a defined relationship with a normal person and you are quiz-ing about it at midnight. Go to sleep.'
+        : 'Ask one clear question, once, in daylight, sober: "What are we doing?" You are not asking to get a yes. You are asking so that the ambiguity stops being free for them. Then believe the first answer, not the fifth clarification.'
+    };
+  }
+});
+</script>
+</body>
+</html>

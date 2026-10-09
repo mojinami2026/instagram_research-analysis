@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Am I Successful or Just Good at LinkedIn?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>📣</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Am I Successful or Just Good at LinkedIn?',
+  emoji: '📣🪞',
+  file: 'narrative_gap',
+  sub: 'Compares your online achievement language against actual income, happiness, and <em>unstructured free time</em>.',
+  intro: 'Paste a recent post or bio if you have one — we score the vocabulary. Or skip it and just answer honestly, which is harder.',
+  button: '✧ MEASURE THE GAP ✧',
+  meterLabel: 'narrative gap — how far the story runs ahead of the life',
+  loaderLines: ['COUNTING THE WORD "humbled" ...', 'COMPARING TITLE TO TAKE-HOME ...', 'ASKING WHEN YOU LAST HAD A FREE SATURDAY ...'],
+  ticker: 'thrilled to announce that i have been tired since 2019',
+
+  fields: [
+    { id: 'post', type: 'textarea', label: 'Paste a recent post, headline, or bio (optional)',
+      placeholder: 'Humbled and honored to share that after an incredible journey, I\'m thrilled to announce I\'m joining...' },
+    { id: 'title', type: 'choice', label: 'How impressive does your job title sound to a stranger?',
+      options: [{ v: 0, label: 'meaningless' }, { v: 1, label: 'normal' }, { v: 2, label: 'impressive' }, { v: 3, label: 'people react at parties' }], default: 2 },
+    { id: 'income', type: 'num', prefix: '$', default: 78000, min: 0, step: 1000, label: 'Actual annual take-home (after tax)' },
+    { id: 'expected', type: 'num', prefix: '$', default: 120000, min: 0, step: 1000,
+      label: 'What would someone assume you earn, based on your online presence?' },
+    { id: 'happy', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'Life satisfaction, right now, honestly', ticks: ['bleak', 'genuinely good'] },
+    { id: 'free', type: 'num', default: 6, min: 0, max: 80, step: 1,
+      label: 'Hours per week of truly unstructured free time', suffix: 'hrs',
+      hint: 'Not chores. Not "recharging for work." Actually yours.' },
+    { id: 'posting', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much do you post about work achievements?', ticks: ['never', 'constantly'] },
+    { id: 'gapfeel', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How different is your online self from your Tuesday self?', ticks: ['identical', 'strangers'] },
+    { id: 'signs', type: 'checks', label: 'Check the true ones',
+      options: [
+        { v: 'sleep', label: 'I sleep well most nights' },
+        { v: 'friends', label: 'I saw a friend, in person, this week, for fun' },
+        { v: 'sunday', label: 'Sunday evenings are peaceful' },
+        { v: 'proud', label: 'I have done something in the last year I am privately proud of' },
+        { v: 'compare', label: 'I check other people\'s profiles more than I would admit' },
+        { v: 'announce', label: 'I have announced something that had not actually happened yet' },
+        { v: 'nobody', label: 'Nobody in my real life fully understands what I do' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var s = v.signs || [];
+    var text = (v.post || '').toLowerCase();
+    var buzz = [
+      ['humbled', 3], ['thrilled to announce', 4], ['excited to share', 3], ['journey', 2], ['grateful', 2],
+      ['passionate', 2], ['leverage', 2], ['synerg', 3], ['disrupt', 3], ['thought leader', 4], ['visionary', 4],
+      ['grinding', 2], ['hustle', 3], ['blessed', 2], ['unlock', 2], ['transform', 2], ['impact', 2],
+      ['proud to', 2], ['delighted', 2], ['incredible team', 3], ['reflect', 1], ['lessons learned', 2]
+    ];
+    var buzzHits = [], buzzScore = 0;
+    buzz.forEach(function (b) {
+      var re = new RegExp(b[0], 'g'), m = text.match(re);
+      if (m) { buzzScore += b[1] * Math.min(m.length, 3); buzzHits.push(b[0] + ' ×' + m.length); }
+    });
+
+    var incomeGap = v.expected > 0 ? Y2K.clamp((v.expected - v.income) / v.expected, -1, 1) : 0;
+    var gap = 0;
+    gap += incomeGap * 34;
+    gap += (10 - v.happy) * 2.6;
+    gap += Y2K.clamp((14 - v.free) * 1.5, -10, 22);
+    gap += v.posting * 2.2;
+    gap += v.gapfeel * 2.8;
+    gap += v.title * 3;
+    gap += Y2K.clamp(buzzScore * 1.1, 0, 18);
+    if (s.indexOf('sleep') > -1) gap -= 7;
+    if (s.indexOf('friends') > -1) gap -= 7;
+    if (s.indexOf('sunday') > -1) gap -= 8;
+    if (s.indexOf('proud') > -1) gap -= 9;
+    if (s.indexOf('compare') > -1) gap += 6;
+    if (s.indexOf('announce') > -1) gap += 9;
+    if (s.indexOf('nobody') > -1) gap += 4;
+    gap = Y2K.clamp(gap + 18, 3, 97);
+
+    var vibe = gap < 38 ? 'good' : gap < 62 ? 'mid' : 'bad';
+    var realScore = Math.round(Y2K.clamp(v.happy * 6 + Math.min(v.free, 20) * 1.6 + (s.indexOf('sunday') > -1 ? 10 : 0) + (s.indexOf('proud') > -1 ? 10 : 0), 0, 100));
+
+    var receipts = [];
+    if (buzzHits.length) receipts.push({ vibe: 'bad',
+      t: '<b>Achievement-language detected:</b> ' + Y2K.esc(buzzHits.join(' · ')) + '. Buzz score <b>' + buzzScore + '</b>. ' +
+         'Every one of these words exists to make a normal event sound like an inflection point.' });
+    else if (text.length > 20) receipts.push({ vibe: 'good', t: 'Your text is remarkably free of achievement-vocabulary. Either you write like a person or you have gotten very good at hiding it.' });
+    receipts.push({ vibe: incomeGap > .25 ? 'bad' : 'good',
+      t: 'Perceived income <b>' + Y2K.money(v.expected) + '</b> vs actual <b>' + Y2K.money(v.income) + '</b>' +
+         (incomeGap > .25 ? ' — a <b>' + Math.round(incomeGap * 100) + '%</b> gap. Prestige and money decoupled somewhere around 2015 and nobody updated the vocabulary.'
+                          : '. Your story and your bank account agree, which is rarer than it should be.') });
+    receipts.push({ vibe: v.free >= 12 ? 'good' : 'bad',
+      t: '<b>' + v.free + ' hours</b> of genuinely free time per week. ' +
+         (v.free < 8 ? 'That is under an hour a day. Free time is the only success metric that cannot be posted, which is exactly why it is the one that gets sacrificed.' : 'Healthy. This is the number to defend when the next opportunity arrives.') });
+    receipts.push({ vibe: v.happy >= 7 ? 'good' : 'bad',
+      t: 'Life satisfaction: <b>' + v.happy + '/10</b> against a public-facing persona rated <b>' + v.gapfeel + '/10</b> different from your Tuesday self. ' +
+         (v.happy < 5 && v.posting > 6 ? 'High output, low satisfaction. The posting is not causing this, but it is very good at hiding it — including from you.' : '') });
+    if (s.indexOf('announce') > -1) receipts.push({ vibe: 'bad', t: 'You have announced something that had not happened yet. Everyone does this. It is also the exact moment the narrative starts leading the life instead of describing it.' });
+    if (s.indexOf('proud') > -1) receipts.push({ vibe: 'good', t: 'There is something you are privately proud of. Unposted pride is the single strongest signal on this page — it is the only kind that was not built for an audience.' });
+
+    var titles = ['Successful. Quietly, actually successful.', 'Mostly real, lightly narrated.',
+                  'Half and half — the story is running slightly ahead.', 'The narrative is outpacing the life.',
+                  'You are extremely good at LinkedIn.'];
+
+    return {
+      score: gap, vibe: vibe, title: Y2K.pick(titles, gap),
+      blurb: gap > 62
+        ? 'The gap between the presented life and the lived one is wide. That does not make you a fraud — it makes you someone whose incentives reward description over experience. The cost shows up as free time, sleep, and Sunday evenings, all of which score low here.'
+        : gap > 38
+          ? 'A normal amount of narrative inflation. Everyone rounds up. Just check occasionally whether you are optimizing for a life or for a feed about one.'
+          : 'Your story and your life are roughly the same size. Whatever you are doing, the private numbers hold up — which is the only version of this that lasts.',
+      stats: [
+        { k: 'narrative gap', v: Math.round(gap) + '/100' },
+        { k: 'real-life score', v: realScore + '/100' },
+        { k: 'income perception gap', v: Math.round(incomeGap * 100) + '%' },
+        { k: 'buzzword density', v: buzzScore }
+      ],
+      receipts: receipts,
+      advice: gap > 55
+        ? 'Try one month without posting anything about work. Nothing bad happens — that is the finding. Then spend the reclaimed attention on the thing you would be proud of even if you could never mention it.'
+        : 'Keep going, and keep the free time. It is the only line item here that compounds in your favor.'
+    };
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How Much Is This Meeting Stealing From My Life?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>⏳</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'How Much Is This Meeting Stealing From My Life?',
+  emoji: '⏳💀',
+  file: 'meeting_tax',
+  sub: 'Converts recurring meeting time into money, sleep, workouts, novels, and <em>years of your finite life</em>.',
+  intro: 'Set it up as the recurring meeting you resent most. The one you are in right now, probably.',
+  button: '✧ PRICE MY SUFFERING ✧',
+  meterLabel: 'waste ratio — how much of this meeting produces nothing',
+  loaderLines: ['MULTIPLYING SALARIES BY ATTENDEES ...', 'CONVERTING MINUTES TO WORKOUTS ...', 'EXTRAPOLATING TO A LIFETIME (ominous) ...'],
+  ticker: 'this could have been an email. so could most emails.',
+
+  fields: [
+    { id: 'mins', type: 'num', default: 60, min: 5, max: 480, step: 5, label: 'Length', suffix: 'min' },
+    { id: 'people', type: 'num', default: 9, min: 1, max: 200, step: 1, label: 'Attendees' },
+    { id: 'freq', type: 'choice', label: 'How often?',
+      options: [
+        { v: 260, label: 'daily' }, { v: 104, label: 'twice a week' }, { v: 52, label: 'weekly' },
+        { v: 26, label: 'fortnightly' }, { v: 12, label: 'monthly' }
+      ], default: 52 },
+    { id: 'salary', type: 'num', prefix: '$', default: 95000, min: 0, step: 5000, label: 'Average attendee salary' },
+    { id: 'mysalary', type: 'num', prefix: '$', default: 85000, min: 0, step: 5000, label: 'Your salary' },
+    { id: 'useful', type: 'slider', min: 0, max: 100, step: 5, default: 25,
+      label: 'What % of this meeting is genuinely useful to YOU?', ticks: ['0%', '100%'] },
+    { id: 'prep', type: 'num', default: 15, min: 0, max: 240, step: 5, label: 'Prep + recovery time per occurrence', suffix: 'min',
+      hint: 'Includes the ten minutes afterward where you stare at a wall.' },
+    { id: 'timing', type: 'choice', label: 'When is it?',
+      options: [
+        { v: 0, label: 'start or end of day' }, { v: 1, label: 'mid-morning' },
+        { v: 2, label: 'right in the middle of the afternoon' }, { v: 3, label: 'it splits my only focus block' }
+      ], default: 2 },
+    { id: 'years', type: 'num', default: 25, min: 0, max: 50, step: 1, label: 'Years left in your career', suffix: 'yrs' },
+    { id: 'could', type: 'choice', label: 'Be honest:',
+      options: [
+        { v: 3, label: 'this could be an email' }, { v: 2, label: 'this could be 15 minutes' },
+        { v: 1, label: 'this needs half the people' }, { v: 0, label: 'this meeting is actually good' }
+      ], default: 3 }
+  ],
+
+  compute: function (v) {
+    var hoursEach = (v.mins + v.prep) / 60;
+    var perYearHoursMe = hoursEach * v.freq;
+    var roomCostPerOccurrence = (v.mins / 60) * v.people * (v.salary / 1800);   // ~1800 productive hrs/yr
+    var roomCostPerYear = roomCostPerOccurrence * v.freq;
+    var myCostPerYear = perYearHoursMe * (v.mysalary / 1800);
+    var wasteRatio = (100 - v.useful) / 100;
+    var wastedRoom = roomCostPerYear * wasteRatio;
+    var focusPenalty = v.timing * 0.25;                                          // fragmented deep work
+    var trueHours = perYearHoursMe * (1 + focusPenalty);
+    var careerHours = trueHours * v.years;
+    var careerMonths = careerHours / (24 * 30);
+
+    var score = Y2K.clamp(wasteRatio * 100 * 0.7 + v.could * 8 + v.timing * 3, 3, 98);
+    var vibe = score > 62 ? 'bad' : score > 38 ? 'mid' : 'good';
+
+    var conversions = [
+      { i: '😴', n: Math.round(trueHours / 8), u: 'full nights of sleep', y: 'per year' },
+      { i: '🏋️', n: Math.round(trueHours / 0.75), u: '45-min workouts', y: 'per year' },
+      { i: '📚', n: Math.round(trueHours / 8), u: 'novels read', y: 'per year' },
+      { i: '✈️', n: Y2K.round(trueHours / 168, 1), u: 'full weeks', y: 'per year' }
+    ];
+    var convHTML = '<div class="subhead">⌛ what that time could have been</div><div class="stats">' +
+      conversions.map(function (c) {
+        return '<div class="stat"><b>' + c.i + ' ' + c.n + '</b><span>' + c.u + '<br>' + c.y + '</span></div>';
+      }).join('') + '</div>';
+
+    var receipts = [
+      { vibe: roomCostPerYear > 25000 ? 'bad' : 'mid',
+        t: 'Each occurrence burns <b>' + Y2K.money(roomCostPerOccurrence) + '</b> of salaried time. Annually that is <b>' +
+           Y2K.money(roomCostPerYear) + '</b> — a real headcount, spent on a recurring calendar entry nobody has reviewed since it was created.' },
+      { vibe: wasteRatio > .6 ? 'bad' : 'good',
+        t: 'You rated it <b>' + v.useful + '%</b> useful, so <b>' + Y2K.money(wastedRoom) +
+           '</b> per year is waste by your own estimate. If two other people in that room would answer the same way, this meeting is the most expensive habit in your department.' },
+      { vibe: v.timing >= 2 ? 'bad' : 'good',
+        t: v.timing >= 2 ? 'It lands mid-afternoon or splits your focus block. A meeting in the middle of the day does not cost its length — it costs the two shallow half-days it creates. We added a ' + Math.round(focusPenalty * 100) + '% fragmentation penalty.'
+                         : 'Edge-of-day placement. The kindest possible slot; whoever scheduled it was thinking.' },
+      { vibe: 'bad',
+        t: 'Over <b>' + v.years + ' remaining career years</b>, this single recurring meeting consumes <b>' + Math.round(careerHours) +
+           ' hours</b> — about <b>' + Y2K.round(careerMonths, 1) + ' months</b> of continuous, waking, non-stop attendance.' },
+      { vibe: v.could === 0 ? 'good' : 'bad',
+        t: v.could === 3 ? 'You said it could be an email. It can. Someone has to say so, and the person who says it is almost never punished — they are usually thanked in private by four people.'
+           : v.could === 2 ? 'Halve the length. Meetings expand to fill the slot they were given; a 30 gets the same decisions as a 60.'
+           : v.could === 1 ? 'Cut the attendee list. Every person added multiplies cost linearly and value approximately not at all.'
+           : 'You rated the meeting as genuinely good. Rare. Protect it, and go tell whoever runs it.' }
+    ];
+
+    return {
+      score: score, vibe: vibe,
+      title: score > 70 ? 'It is stealing ' + Y2K.round(careerMonths, 1) + ' months of your life.'
+           : score > 40 ? 'Expensive, but not indefensible.'
+           : 'This meeting is fine. Genuinely.',
+      blurb: 'At <b>' + v.mins + ' minutes × ' + v.freq + '/year × ' + v.people + ' people</b>, the room costs <b>' +
+             Y2K.money(roomCostPerYear) + '</b> a year. Your personal share is <b>' + Y2K.money(myCostPerYear) +
+             '</b> and <b>' + Math.round(trueHours) + ' hours</b> — before we count what the interruption does to everything around it.',
+      stats: [
+        { k: 'cost per occurrence', v: Y2K.money(roomCostPerOccurrence) },
+        { k: 'annual room cost', v: Y2K.money(roomCostPerYear) },
+        { k: 'your hours/year', v: Math.round(trueHours) },
+        { k: 'career months lost', v: Y2K.round(careerMonths, 1) }
+      ],
+      receipts: receipts,
+      extra: convHTML + '<p class="note" style="margin-top:12px">Salary-to-hour conversion assumes ~1,800 productive hours per year. ' +
+             'Fully-loaded employer cost is typically 1.25–1.4× salary, so the real number is worse.</p>',
+      advice: score > 55
+        ? 'Do not try to cancel it — try to shrink it. Propose the 25-minute version with half the invite list "as an experiment for a month." Nobody defends a meeting they were quietly relieved to leave. If you own the invite, delete it and see who complains: usually nobody does, and that is the answer.'
+        : 'Leave it alone and go be annoyed about something more expensive.'
+    };
+  }
+});
+</script>
+</body>
+</html>

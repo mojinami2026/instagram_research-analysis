@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Can I Afford a Baby — or Just the Announcement Photos?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🍼</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Can I Afford a Baby — or Just the Announcement Photos?',
+  emoji: '🍼📸',
+  file: 'aesthetic_reveal',
+  sub: 'Models the entire financial catastrophe that begins <em>after</em> the golden-hour reveal in a field.',
+  intro: 'The photos cost about $400. Everything after that is the app.',
+  button: '✧ MODEL THE CATASTROPHE ✧',
+  meterLabel: 'affordability of year one',
+  loaderLines: ['PRICING A FIELD AT GOLDEN HOUR ...', 'LOADING CHILDCARE RATES (sorry) ...', 'PROJECTING 5 YEARS OF NAPPIES AND CAREER DRAG ...'],
+  ticker: 'nobody can afford it. some people can afford it slightly.',
+
+  fields: [
+    { id: 'income', type: 'num', prefix: '$', default: 6800, min: 0, step: 100, label: 'Combined monthly take-home' },
+    { id: 'costs', type: 'num', prefix: '$', default: 4200, min: 0, step: 100, label: 'Current monthly outgoings' },
+    { id: 'savings', type: 'num', prefix: '$', default: 15000, min: 0, step: 500, label: 'Savings' },
+    { id: 'birth', type: 'num', prefix: '$', default: 3000, min: 0, step: 500,
+      label: 'Out-of-pocket birth cost in your country', hint: 'Insurance deductibles, scans, the extras nobody warns you about.' },
+    { id: 'childcare', type: 'num', prefix: '$', default: 1400, min: 0, step: 100,
+      label: 'Full-time childcare in your area', suffix: '/mo' },
+    { id: 'leave', type: 'choice', label: 'Parental leave situation',
+      options: [
+        { v: 0, label: 'generous, paid, both of us' }, { v: 1, label: 'decent paid leave, one of us' },
+        { v: 2, label: 'minimal / partly unpaid' }, { v: 3, label: 'basically none' }
+      ], default: 2 },
+    { id: 'careerdrag', type: 'choice', label: 'Career impact on the lower earner',
+      options: [
+        { v: 0, label: 'none, we both keep going' }, { v: 1, label: 'a slower year or two' },
+        { v: 2, label: 'part-time for a few years' }, { v: 3, label: 'someone stops working' }
+      ], default: 1 },
+    { id: 'help', type: 'choice', label: 'Free family help nearby',
+      options: [
+        { v: 3, label: 'lots — regular, reliable childcare' }, { v: 2, label: 'some' },
+        { v: 1, label: 'occasional' }, { v: 0, label: 'none at all' }
+      ], default: 1 },
+    { id: 'housing', type: 'choice', label: 'Housing',
+      options: [
+        { v: 0, label: 'we have the space already' }, { v: 1, label: 'tight but workable' },
+        { v: 2, label: 'we would need to move' }, { v: 3, label: 'we would need to move to a pricier area for schools' }
+      ], default: 1 },
+    { id: 'aesthetic', type: 'num', prefix: '$', default: 900, min: 0, step: 100,
+      label: 'Budget for announcement photos, nursery aesthetic, and the pram you have already chosen',
+      hint: 'Be honest. You know the pram. It has a name.' }
+  ],
+
+  compute: function (v) {
+    var monthlySlack = v.income - v.costs;
+
+    // year one
+    var leaveLoss = [0, 2200, 6500, 13000][v.leave];
+    var helpDiscount = [1, .85, .6, .35][v.help];
+    var careMonths = 8;                                   // childcare typically starts partway through yr 1
+    var careYr1 = v.childcare * careMonths * helpDiscount;
+    var gear = 2600 + v.aesthetic;
+    var housingYr1 = [0, 0, 3600, 9000][v.housing];
+    var running = 480 * 12;                               // nappies, food, clothes, medical sundries
+    var yr1 = v.birth + gear + careYr1 + housingYr1 + running + leaveLoss;
+
+    // five years
+    var careerLoss = [0, 9000, 42000, 130000][v.careerdrag];
+    var yr2to5 = (v.childcare * 12 * helpDiscount + 5200 + housingYr1 * 0.7) * 4;
+    var fiveYear = yr1 + yr2to5 + careerLoss;
+
+    var annualSlack = Math.max(monthlySlack * 12, 1);
+    var burden = yr1 / annualSlack;
+    var score = Y2K.clamp((1 - burden * 0.85) * 100, 2, 97);
+    var vibe = score >= 55 ? 'good' : score >= 28 ? 'mid' : 'bad';
+    var monthsCovered = v.savings / Math.max(yr1 / 12, 1);
+
+    var rows = [
+      ['📸 the announcement + nursery aesthetic', v.aesthetic],
+      ['🏥 birth, out of pocket', v.birth],
+      ['🛒 gear, cot, pram, the 40 small things', 2600],
+      ['🧸 childcare, first year', careYr1],
+      ['🏠 housing change', housingYr1],
+      ['🍼 running costs', running],
+      ['💼 lost income during leave', leaveLoss]
+    ];
+    var table = '<div class="subhead">🧾 year one, itemized</div><div class="tablewrap"><table class="table"><thead><tr>' +
+      '<th>line item</th><th>cost</th><th>% of year 1</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr><td>' + r[0] + '</td><td>' + Y2K.money(r[1]) + '</td><td>' + Math.round(r[1] / yr1 * 100) + '%</td></tr>';
+      }).join('') +
+      '<tr><th>TOTAL</th><th>' + Y2K.money(yr1) + '</th><th>100%</th></tr></tbody></table></div>';
+
+    var photoShare = v.aesthetic / yr1 * 100;
+
+    var receipts = [
+      { vibe: 'mid',
+        t: 'The announcement photos and aesthetic layer are <b>' + Y2K.round(photoShare, 1) + '%</b> of year one. ' +
+           'They are also 100% of what most people mentally budget for, which is why this page exists.' },
+      { vibe: careYr1 > yr1 * .35 ? 'bad' : 'mid',
+        t: 'Childcare is <b>' + Y2K.money(careYr1) + '</b> in year one and <b>' + Y2K.money(v.childcare * 12 * helpDiscount) +
+           '</b>/year after. In most cities it is the second mortgage nobody applied for.' },
+      { vibe: v.help >= 2 ? 'good' : 'bad',
+        t: v.help >= 2 ? 'Nearby family help cuts your childcare bill by roughly <b>' + Math.round((1 - helpDiscount) * 100) + '%</b>. Grandparents are, financially speaking, the highest-yield asset class available to new parents.'
+                       : 'No family help nearby. Every hour of care is a paid hour, and this single variable moves the five-year total by tens of thousands.' },
+      { vibe: v.careerdrag >= 2 ? 'bad' : 'good',
+        t: 'Career impact is projected at <b>' + Y2K.money(careerLoss) + '</b> over five years. ' +
+           (v.careerdrag >= 2 ? 'This is the largest and least-discussed number in the whole model, it lands overwhelmingly on one person, and it compounds for decades through lost promotions and pension contributions.' : 'Minimal drag — both careers stay live, which is the single best financial decision available here.') },
+      { vibe: monthsCovered > 6 ? 'good' : 'bad',
+        t: 'Your savings cover <b>' + Y2K.round(monthsCovered, 1) + ' months</b> of year-one costs. ' +
+           (monthsCovered < 4 ? 'Thin. The first year is also the year most likely to produce an unplanned expense.' : 'Reasonable buffer.') },
+      { vibe: v.leave >= 2 ? 'bad' : 'good',
+        t: v.leave >= 2 ? 'Minimal paid leave costs you <b>' + Y2K.money(leaveLoss) + '</b> at exactly the moment your outgoings jump. The timing is the cruelty, not the amount.' : 'Decent leave. That is worth more than any gear you could buy.' }
+    ];
+
+    return {
+      score: score, vibe: vibe,
+      title: score < 28 ? 'You can afford the photos.' :
+             score < 55 ? 'Affordable, with visible strain and no margin.' :
+             'Affordable. Genuinely.',
+      blurb: 'Year one lands at <b>' + Y2K.money(yr1) + '</b> — <b>' + Math.round(burden * 100) +
+             '%</b> of your annual financial slack. Five years, including career impact: <b>' + Y2K.money(fiveYear) +
+             '</b>. The announcement shoot is ' + Y2K.round(photoShare, 1) + '% of that.',
+      stats: [
+        { k: 'year 1', v: Y2K.money(yr1) },
+        { k: '5 years', v: Y2K.money(fiveYear) },
+        { k: 'monthly slack now', v: Y2K.money(monthlySlack) },
+        { k: 'savings cover', v: Y2K.round(monthsCovered, 1) + ' mo' }
+      ],
+      receipts: receipts,
+      extra: table + '<p class="note" style="margin-top:12px">Everyone who has done this will tell you the numbers did not stop them. ' +
+             'They are right, and the numbers still deserve to be seen once, on purpose, before rather than after.</p>',
+      advice: score < 30
+        ? 'The two levers that actually move this are childcare and career drag — not gear, not the pram, not the nursery. Before anything else, find out exactly what leave you are entitled to and what care in your area costs at your start date. Those two calls change the model more than a year of budgeting.'
+        : 'You are in workable range. Build a buffer of three months of year-one costs (' + Y2K.money(yr1 / 4) + ') before the due date and the rest is logistics.'
+    };
+  }
+});
+</script>
+</body>
+</html>

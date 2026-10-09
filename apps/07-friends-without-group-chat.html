@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Would We Still Be Friends Without the Group Chat?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>💬</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Would We Still Be Friends Without the Group Chat?',
+  emoji: '💬🫧',
+  file: 'load_bearing_chat',
+  sub: 'We analyze who initiates, who meets one-on-one, and who <em>remembers birthdays without a notification</em>.',
+  intro: 'Think of ONE specific friend from the group chat. Answer about them. Not the group — them.',
+  button: '✧ SIMULATE THE CHAT SHUTTING DOWN ✧',
+  meterLabel: 'survival odds if the group chat vanished tonight',
+  loaderLines: ['DELETING GROUP CHAT (hypothetically) ...', 'COUNTING 1:1 MESSAGES ...', 'CHECKING WHO TEXTS FIRST ...'],
+  ticker: 'a group chat is scaffolding. some friendships are just scaffolding.',
+
+  fields: [
+    { id: 'name', type: 'text', label: 'Friend\'s name (stays in your browser)', placeholder: 'e.g. Dani' },
+    { id: 'solo', type: 'choice', label: 'When did you last hang out one-on-one, no group?',
+      options: [
+        { v: 4, label: 'this month' }, { v: 3, label: 'this year' },
+        { v: 2, label: 'over a year ago' }, { v: 1, label: 'only ever in groups' }, { v: 0, label: 'never, actually' }
+      ], default: 2 },
+    { id: 'dm', type: 'slider', min: 0, max: 10, default: 3,
+      label: 'How much do you two talk in DMs, outside the group?', ticks: ['zero', 'constantly'] },
+    { id: 'init', type: 'slider', min: 0, max: 100, step: 5, default: 50,
+      label: 'Of your 1:1 contact, what % do you start?', ticks: ['0% — all them', '100% — all me'] },
+    { id: 'bday', type: 'choice', label: 'Birthdays',
+      options: [
+        { v: 3, label: 'they remember unprompted, every year' },
+        { v: 2, label: 'they post in the group chat after someone else does' },
+        { v: 1, label: 'only if Facebook tells them' },
+        { v: 0, label: 'I do not think they know when mine is' }
+      ], default: 2 },
+    { id: 'know', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much do they know about your actual current life?',
+      hint: 'Job stress, health thing, the situation with your family.', ticks: ['headline only', 'everything'] },
+    { id: 'moved', type: 'choice', label: 'If one of you moved cities tomorrow:',
+      options: [
+        { v: 3, label: 'we would call. genuinely.' },
+        { v: 2, label: 'we would text for a few months' },
+        { v: 1, label: 'we would like each other\'s posts' },
+        { v: 0, label: 'nothing would happen' }
+      ], default: 1 },
+    { id: 'history', type: 'choice', label: 'How did this friendship start?',
+      options: [
+        { v: 3, label: 'we chose each other' },
+        { v: 2, label: 'we were thrown together and it took' },
+        { v: 1, label: 'mutual friends, always' },
+        { v: 0, label: 'literally the group chat' }
+      ], default: 1 },
+    { id: 'tests', type: 'checks', label: 'Has any of this happened?',
+      options: [
+        { v: 'hard', label: 'You have told them something genuinely hard' },
+        { v: 'theyhard', label: 'They have told YOU something genuinely hard' },
+        { v: 'showed', label: 'One of you showed up for the other with no audience' },
+        { v: 'boring', label: 'You have done something boring together (errands, waiting rooms, IKEA)' },
+        { v: 'onlyfun', label: 'You only see them where alcohol is present' },
+        { v: 'noplan', label: 'A 1:1 plan has been suggested and quietly never happened' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var t = v.tests || [];
+    var name = (v.name || '').trim() || 'this friend';
+    var score = 14;
+    score += v.solo * 10;
+    score += v.dm * 2.6;
+    score += v.bday * 5;
+    score += v.know * 2.4;
+    score += v.moved * 7;
+    score += v.history * 4;
+    score -= Math.abs(v.init - 50) * 0.22;
+    if (t.indexOf('hard') > -1) score += 7;
+    if (t.indexOf('theyhard') > -1) score += 9;
+    if (t.indexOf('showed') > -1) score += 10;
+    if (t.indexOf('boring') > -1) score += 8;
+    if (t.indexOf('onlyfun') > -1) score -= 9;
+    if (t.indexOf('noplan') > -1) score -= 8;
+    score = Y2K.clamp(score, 3, 97);
+    var vibe = score >= 62 ? 'good' : score >= 38 ? 'mid' : 'bad';
+
+    var receipts = [
+      { vibe: v.solo >= 3 ? 'good' : 'bad',
+        t: v.solo >= 3 ? 'You have hung out one-on-one recently. That is the whole test, honestly, and you passed it.'
+                       : 'No recent 1:1 time. Group hangs prove you enjoy the same room; they do not prove you would choose each other.' },
+      { vibe: v.bday >= 2 ? 'good' : 'bad',
+        t: 'Birthday behavior scores <b>' + v.bday + '/3</b>. ' +
+           (v.bday >= 3 ? 'Unprompted memory is expensive attention. It means you occupy space in their head when you are not in the room.'
+                        : 'Notification-driven. That is a friendship with the group chat, routed through you.') },
+      { vibe: t.indexOf('theyhard') > -1 ? 'good' : 'mid',
+        t: t.indexOf('theyhard') > -1 ? 'They have brought you something hard. Choosing who to be vulnerable with is a ranking, and you are on it.'
+                                      : 'Nothing hard has ever moved in your direction. Friendships that only carry good news are lighter than they feel.' },
+      { vibe: t.indexOf('boring') > -1 ? 'good' : 'mid',
+        t: t.indexOf('boring') > -1 ? 'You have been bored together. Real friendship is measured in dull hours, not fun ones.'
+                                    : 'All of your shared time is event-shaped. Try one errand together — it sounds absurd and it is a genuinely reliable test.' },
+      { vibe: Math.abs(v.init - 50) > 25 ? 'bad' : 'good',
+        t: 'You start <b>' + v.init + '%</b> of your 1:1 contact. ' +
+           (v.init > 75 ? 'A friendship where one person does all the initiating is a friendship one person is having.'
+            : v.init < 25 ? 'They do most of the reaching. Reciprocate this week — the effort is currently uncosted for you.'
+            : 'Balanced initiation. Healthy.') }
+    ];
+
+    var titles = [
+      'No. You are group-chat colleagues.',
+      'Probably not — you like them, but the chat is doing the work.',
+      'Maybe. It would need one deliberate rescue.',
+      'Yes, with some drift.',
+      'Yes. The group chat is a bonus, not the foundation.'
+    ];
+
+    return {
+      score: score, vibe: vibe, title: Y2K.pick(titles, score),
+      blurb: score < 38
+        ? 'Without the shared thread there is no mechanism for you two to talk, and no evidence either of you would build one. That is not a betrayal — most adult friendships are situational, and it is fine to enjoy ' + Y2K.esc(name) + ' exactly as much as the format allows.'
+        : score < 62
+          ? 'This one is on the edge. It has real material in it, but nothing currently exists outside the group format. Friendships in this zone are the ones most often lost by accident rather than decision.'
+          : 'This friendship has independent load-bearing structure: 1:1 time, unprompted memory, and at least one moment where somebody showed up. The chat is decoration.',
+      stats: [
+        { k: 'survival odds', v: Math.round(score) + '%' },
+        { k: 'last 1:1', v: ['never','groups only','1+ yr','this year','this month'][v.solo] },
+        { k: 'your init share', v: v.init + '%' },
+        { k: 'real-friendship tests passed', v: t.filter(function (x) { return ['hard','theyhard','showed','boring'].indexOf(x) > -1; }).length + '/4' }
+      ],
+      receipts: receipts,
+      advice: score < 62
+        ? 'Text ' + Y2K.esc(name) + ' directly — not the group — with a specific plan and a specific day. One message settles this permanently, in either direction, and both answers are survivable.'
+        : 'Nothing to fix. Maybe tell them, though. People do not hear this often.'
+    };
+  }
+});
+</script>
+</body>
+</html>

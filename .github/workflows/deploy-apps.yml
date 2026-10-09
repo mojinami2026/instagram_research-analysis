@@ -1,0 +1,77 @@
+name: Deploy Overthinking Suite to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master, "claude/**"]
+    paths:
+      - "apps/**"
+      - "wrangler.toml"
+      - ".github/workflows/deploy-apps.yml"
+  pull_request:
+    paths:
+      - "apps/**"
+      - "wrangler.toml"
+      - ".github/workflows/deploy-apps.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Forked PRs cannot read secrets; skip rather than fail a red X onto the PR.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # The suite is static files, so "verifying the build" means verifying the
+      # pages actually run: load every app in headless Chromium, submit its form,
+      # and fail if any page throws, renders no result, or links somewhere dead.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install test dependencies
+        run: npm install --no-save playwright@1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke-test every app
+        run: node apps/tools/smoke-test.js
+
+      - name: Create Pages project if it does not exist
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create overthinking-suite --production-branch=${{ github.event.repository.default_branch }}
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Reads name + pages_build_output_dir from wrangler.toml.
+          command: pages deploy --branch=${{ github.head_ref || github.ref_name }}
+
+      - name: Summarize
+        run: |
+          {
+            echo "### 🌈 Overthinking Suite deployed"
+            echo ""
+            echo "- **URL:** ${{ steps.deploy.outputs.deployment-url }}"
+            echo "- **Branch:** \`${{ github.head_ref || github.ref_name }}\`"
+            echo "- **Commit:** \`${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

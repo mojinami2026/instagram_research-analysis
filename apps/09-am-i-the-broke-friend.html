@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Am I the Broke Friend?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🪙</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Am I the Broke Friend?',
+  emoji: '🪙😬',
+  file: 'split_evenly',
+  sub: 'Compares suggested restaurants, travel habits, Venmo timing, and the sacred horror of <em>"let\'s just split it evenly"</em>.',
+  intro: 'Every friend group has one. Statistically it is not everyone, so the odds are actually in your favor.',
+  button: '✧ CHECK MY POSITION ✧',
+  meterLabel: 'financial position within your friend group — 50 is dead center',
+  loaderLines: ['SUMMING EVERYONE ELSE\'S BRUNCHES ...', 'AUDITING THE SPLIT-EVENLY TAX ...', 'CHECKING WHO ORDERS THE SECOND BOTTLE ...'],
+  ticker: 'the broke friend is usually the one who suggests the good cheap place',
+
+  fields: [
+    { id: 'suggest', type: 'num', prefix: '$', default: 25, min: 0, step: 5,
+      label: 'What does a restaurant YOU suggest usually cost per person?' },
+    { id: 'theirs', type: 'num', prefix: '$', default: 55, min: 0, step: 5,
+      label: 'What does a restaurant THEY suggest usually cost per person?' },
+    { id: 'trips', type: 'choice', label: 'When the group plans a trip:',
+      options: [
+        { v: 0, label: 'I plan it and pick the nice place' },
+        { v: 1, label: 'I go easily, no thinking' },
+        { v: 2, label: 'I go, then quietly recover for two months' },
+        { v: 3, label: 'I invent a scheduling conflict' }
+      ], default: 2 },
+    { id: 'venmo', type: 'choice', label: 'Your Venmo timing:',
+      options: [
+        { v: 0, label: 'I am the one who requests, instantly' },
+        { v: 1, label: 'I pay within the hour' },
+        { v: 2, label: 'I pay when reminded' },
+        { v: 3, label: 'I have outstanding requests right now' }
+      ], default: 1 },
+    { id: 'split', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How much does "let\'s just split evenly" cost you emotionally?',
+      hint: 'You had the soup. They had three cocktails and the market fish.',
+      ticks: ['fine, whatever', 'it ruins the night'] },
+    { id: 'order', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much do you look at prices before ordering?', ticks: ['never', 'always, first'] },
+    { id: 'income', type: 'choice', label: 'Honestly, where does your income sit in this group?',
+      options: [
+        { v: 0, label: 'top' }, { v: 1, label: 'upper middle' },
+        { v: 2, label: 'middle' }, { v: 3, label: 'lower' }, { v: 4, label: 'bottom, clearly' }
+      ], default: 2 },
+    { id: 'support', type: 'choice', label: 'Family financial support in the group:',
+      options: [
+        { v: 0, label: 'I get help too' },
+        { v: 1, label: 'nobody gets help' },
+        { v: 2, label: 'some of them get help and it shows' },
+        { v: 3, label: 'most of them do and nobody says it out loud' }
+      ], default: 2 },
+    { id: 'tells', type: 'checks', label: 'The tells',
+      options: [
+        { v: 'pregame', label: 'You eat before going out to dinner' },
+        { v: 'water', label: 'You have ordered tap water while everyone got cocktails' },
+        { v: 'skip', label: 'You have skipped an event purely for cost' },
+        { v: 'covered', label: 'Someone has quietly covered you' },
+        { v: 'covering', label: 'You have quietly covered someone else' },
+        { v: 'nocheck', label: 'You genuinely never check your balance before going out' },
+        { v: 'cheapest', label: 'You are the one who finds the good cheap place' }
+      ] }
+  ],
+
+  compute: function (v) {
+    var t = v.tells || [];
+    var gap = v.theirs - v.suggest;
+    var score = 50;                      // 50 = middle of the group; higher = more comfortable
+    score -= gap * 0.42;
+    score -= v.trips * 7;
+    score -= v.venmo * 5.5;
+    score -= v.split * 2.2;
+    score -= v.order * 2.0;
+    score -= v.income * 7;
+    score -= v.support * 3.4;
+    if (t.indexOf('pregame') > -1) score -= 6;
+    if (t.indexOf('water') > -1) score -= 5;
+    if (t.indexOf('skip') > -1) score -= 9;
+    if (t.indexOf('covered') > -1) score -= 6;
+    if (t.indexOf('covering') > -1) score += 9;
+    if (t.indexOf('nocheck') > -1) score += 10;
+    if (t.indexOf('cheapest') > -1) score -= 3;
+    score = Y2K.clamp(score, 3, 97);
+
+    var vibe = score >= 58 ? 'good' : score >= 34 ? 'mid' : 'bad';
+    var splitTax = Math.max(0, (v.theirs - v.suggest) * 0.5) * 4 * 12;   // ~4 group dinners/month, half the gap
+
+    var receipts = [
+      { vibe: gap > 30 ? 'bad' : 'good',
+        t: 'Your restaurant suggestions run <b>' + Y2K.money(v.suggest) + '</b>; theirs run <b>' + Y2K.money(v.theirs) +
+           '</b>. Gap: <b>' + Y2K.money(gap) + '</b> per head. ' +
+           (gap > 30 ? 'Restaurant suggestions are the most honest income signal in any friend group. Nobody suggests a place they cannot comfortably afford.' : 'You and your friends have the same price ceiling. That is a quiet, enormous compatibility.') },
+      { vibe: v.split >= 7 ? 'bad' : 'mid',
+        t: '"Split evenly" costs you <b>' + v.split + '/10</b> emotionally. ' +
+           (v.split >= 7 ? 'Roughly <b>' + Y2K.money(splitTax) + '/year</b> of subsidy at your stated numbers — you are paying for other people\'s cocktails at the rate of a small holiday.'
+                         : 'Low friction. Even splits only hurt when the orders diverge.') },
+      { vibe: v.trips >= 2 ? 'bad' : 'good',
+        t: v.trips >= 3 ? 'You have invented scheduling conflicts to avoid trip costs. That is the defining behavior of this category and also completely understandable.'
+           : v.trips === 2 ? 'You go and then recover for two months. The trip is affordable; the recovery is the actual price.'
+           : 'Trips are frictionless for you. Notice who goes quiet when the group chat starts planning one.' },
+      { vibe: t.indexOf('covering') > -1 ? 'good' : t.indexOf('covered') > -1 ? 'bad' : 'mid',
+        t: t.indexOf('covering') > -1 ? 'You have quietly covered other people. Whatever your bank balance says, you are not the broke friend in the way that matters.'
+           : t.indexOf('covered') > -1 ? 'Someone has quietly covered you. They did it quietly on purpose — that was kindness, not a scorecard.'
+           : 'No covering in either direction. Clean books.' },
+      { vibe: v.support >= 2 ? 'mid' : 'good',
+        t: v.support >= 2 ? 'Some of your friends get family support and it is never said out loud. You are not comparing lifestyles, you are comparing balance sheets you cannot see. Half the "broke friend" feeling in the world is this and only this.'
+                          : 'Everyone is running on their own income. At least the comparison is fair.' }
+    ];
+
+    var titles = [
+      'Yes. You are the broke friend.',
+      'You are the budget-conscious one, which is adjacent.',
+      'You are dead center. Nobody has ever thought about this but you.',
+      'You are on the comfortable side.',
+      'You are the rich friend. You may have suspected otherwise.'
+    ];
+
+    return {
+      score: score, vibe: vibe, title: Y2K.pick(titles, score),
+      blurb: score < 34
+        ? 'The signals line up: cheaper suggestions, price-checking, trip avoidance, and the split-evenly tax. None of this is a character flaw, but it is costing you real money and real evenings, and the group almost certainly has not noticed.'
+        : score < 58
+          ? 'You are within normal range for your group. You feel poorer than you are because you are the only one doing the math at the table.'
+          : 'You are on the comfortable end. Worth knowing — the person opposite you at dinner may be running the calculation you are not.',
+      stats: [
+        { k: 'position', v: Math.round(score) + '/100' },
+        { k: 'suggestion gap', v: Y2K.money(gap) },
+        { k: 'split-evenly tax', v: Y2K.money(splitTax) + '/yr' },
+        { k: 'tells ticked', v: t.length + '/7' }
+      ],
+      receipts: receipts,
+      advice: score < 40
+        ? 'Two scripts that work and cost nothing: "I\'m going to get just my own bill tonight" and "I\'m out for this trip, but I\'m in for the weekend one." Said flatly, without apology, they end the problem permanently. Real friends do not flinch.'
+        : score > 62
+          ? 'Be the one who suggests the cheap place sometimes. Whoever is quiet when the group picks the restaurant will remember it for years.'
+          : 'Nothing to fix. Order what you want.'
+    };
+  }
+});
+</script>
+</body>
+</html>

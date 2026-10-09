@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Is My Therapist Proud of Me?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🪑</text></svg>">
+<style>
+  .quests { margin:0; padding:0; list-style:none; }
+  .quest { display:flex; align-items:center; gap:10px; background:#fff; border:2px solid var(--lilac); border-radius:6px;
+           padding:8px 10px; margin-bottom:7px; box-shadow:2px 2px 0 rgba(120,0,90,.15); font-size:14px; }
+  .quest .xp { margin-left:auto; font-family:'VT323','Courier New',ui-monospace,monospace; font-size:20px; color:var(--hotpink); }
+  .quest.done { background:#effff5; border-color:var(--good); }
+  .lvl { text-align:center; font-family:'VT323','Courier New',ui-monospace,monospace; font-size:26px; color:#6a0d5e; }
+</style>
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Is My Therapist Proud of Me?',
+  emoji: '🪑✨',
+  file: 'growth_rpg',
+  sub: 'Gamifies personal growth in a way your therapist would <em>almost certainly oppose</em>, which is itself a symptom worth discussing.',
+  intro: 'Therapists do not grade you. That is the single hardest thing about therapy, and it is why this page has an XP bar.',
+  button: '✧ CHECK MY XP ✧',
+  meterLabel: 'growth XP (not real, not a grade, not a diagnosis)',
+  loaderLines: ['LOADING SAVE FILE ...', 'AWARDING XP FOR SAYING NO ONCE ...', 'YOUR THERAPIST WOULD HATE THIS SCREEN ...'],
+  ticker: 'needing to be graded on healing is, itself, a thing to bring up in session',
+
+  fields: [
+    { id: 'quests', type: 'checks', label: 'Achievements unlocked this season',
+      hint: 'Tick anything you have genuinely done in the last few months.',
+      options: [
+        { v: 'no', label: '🛡️ Said no to something you would previously have agreed to' },
+        { v: 'ask', label: '🗣️ Asked for something directly instead of hinting' },
+        { v: 'feel', label: '🌊 Felt a hard feeling without immediately fixing or numbing it' },
+        { v: 'apologize', label: '🤝 Apologized without over-apologizing' },
+        { v: 'boundary', label: '🚧 Held a boundary after someone pushed back' },
+        { v: 'rest', label: '🛌 Rested without earning it first' },
+        { v: 'repair', label: '🧵 Repaired a conflict instead of avoiding it' },
+        { v: 'pattern', label: '🔁 Caught a pattern in real time, not three weeks later' },
+        { v: 'help', label: '📞 Let someone help you' },
+        { v: 'leave', label: '🚪 Left something that was not working' }
+      ] },
+    { id: 'attendance', type: 'choice', label: 'Session attendance',
+      options: [
+        { v: 3, label: 'consistent, including the weeks I did not feel like it' },
+        { v: 2, label: 'mostly consistent' },
+        { v: 1, label: 'I cancel when things get busy' },
+        { v: 0, label: 'I cancel when things get hard' }
+      ], default: 2 },
+    { id: 'honesty', type: 'slider', min: 0, max: 10, default: 6,
+      label: 'How honest are you in the room?',
+      hint: 'Including the parts that make you look bad.', ticks: ['performing', 'fully honest'] },
+    { id: 'homework', type: 'slider', min: 0, max: 10, default: 4,
+      label: 'Do you do the between-session work?', ticks: ['never', 'always'] },
+    { id: 'outside', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How much has changed OUTSIDE the room?',
+      hint: 'Insight is cheap. Behavior is the expensive part.', ticks: ['nothing yet', 'a lot' ] },
+    { id: 'approval', type: 'slider', min: 0, max: 10, default: 7,
+      label: 'How much do you want your therapist to be impressed by you?',
+      ticks: ['not at all', 'desperately'] },
+    { id: 'good', type: 'slider', min: 0, max: 10, default: 5,
+      label: 'How often do you try to be a "good client"?', ticks: ['never', 'every session'] },
+    { id: 'hard', type: 'choice', label: 'The thing you have not said yet:',
+      options: [
+        { v: 3, label: 'there isn\'t one — I say everything' },
+        { v: 2, label: 'there is one and I am building up to it' },
+        { v: 1, label: 'there is one and I actively avoid it' },
+        { v: 0, label: 'there are several and I have a system for avoiding them' }
+      ], default: 1 }
+  ],
+
+  compute: function (v) {
+    var q = v.quests || [];
+    var XP = { no: 90, ask: 85, feel: 120, apologize: 60, boundary: 110, rest: 95, repair: 130, pattern: 140, help: 100, leave: 150 };
+    var LBL = {
+      no: 'Said no', ask: 'Asked directly', feel: 'Sat with a feeling', apologize: 'Clean apology',
+      boundary: 'Held a boundary', rest: 'Rested unearned', repair: 'Repaired a conflict',
+      pattern: 'Caught a pattern live', help: 'Let someone help', leave: 'Left what did not work'
+    };
+    var xp = 0;
+    q.forEach(function (k) { xp += XP[k] || 0; });
+    xp += v.attendance * 60 + v.honesty * 22 + v.homework * 14 + v.outside * 30;
+
+    var maxXP = 1180 + 180 + 220 + 140 + 300;
+    var score = Y2K.clamp((xp / maxXP) * 100, 3, 98);
+    var level = Math.max(1, Math.floor(xp / 220));
+    var vibe = score >= 60 ? 'good' : score >= 35 ? 'mid' : 'bad';
+
+    var approvalTrap = Y2K.clamp(v.approval * 6 + v.good * 5 - v.honesty * 4 + (v.hard <= 1 ? 18 : 0), 0, 100);
+
+    var questHTML = '<div class="subhead">🎮 quest log</div><ul class="quests">' +
+      Object.keys(XP).map(function (k) {
+        var done = q.indexOf(k) > -1;
+        return '<li class="quest ' + (done ? 'done' : '') + '">' + (done ? '✅' : '⬜') + ' ' + LBL[k] +
+          '<span class="xp">' + (done ? '+' : '') + XP[k] + ' xp</span></li>';
+      }).join('') + '</ul><div class="lvl">◆ LEVEL ' + level + ' ◆</div>';
+
+    var receipts = [
+      { vibe: v.outside >= 6 ? 'good' : 'bad',
+        t: 'Change outside the room: <b>' + v.outside + '/10</b>. ' +
+           (v.outside >= 6 ? 'This is the only metric therapists actually care about. Insight that never leaves the office is a hobby.'
+                           : 'Lots of understanding, less behavior change so far. That is a normal and specific stage, and it is worth naming in session as the current goal.') },
+      { vibe: v.honesty >= 7 ? 'good' : 'bad',
+        t: 'Honesty in the room: <b>' + v.honesty + '/10</b>. ' +
+           (v.honesty >= 7 ? 'You bring the unflattering material. That is the entire mechanism — nothing else in therapy works without it.'
+                           : 'You are curating. Understandable, and it means you are paying a professional to help a version of you that does not need help.') },
+      { vibe: approvalTrap > 60 ? 'bad' : 'good',
+        t: 'Approval-seeking index: <b>' + Math.round(approvalTrap) + '/100</b>. ' +
+           (approvalTrap > 60 ? 'You want your therapist impressed at ' + v.approval + '/10 and try to be a good client at ' + v.good +
+             '/10. Performing wellness for the one person hired to see through it is the most common and most human thing in this whole field. It is also, genuinely, excellent material for next session.'
+             : 'Low performance pressure. You are using the room for what it is for.') },
+      { vibe: v.hard >= 2 ? 'good' : 'bad',
+        t: v.hard === 0 ? 'You have a system for avoiding several topics. The system is more interesting than the topics and your therapist would say so.'
+           : v.hard === 1 ? 'There is a thing you actively avoid. It is almost certainly the thing. It usually is.'
+           : v.hard === 2 ? 'You are building up to the hard thing. That counts — the run-up is part of it.'
+           : 'You say everything. Rare, and probably the reason this is working.' },
+      { vibe: v.attendance >= 2 ? 'good' : 'bad',
+        t: v.attendance === 0 ? 'You cancel when things get hard. That is the pattern in miniature — the sessions you skip are the ones with the material in them.'
+           : v.attendance === 3 ? 'You show up even when you do not feel like it. Unglamorous, and it is most of the work.'
+           : 'Reasonably consistent attendance.' }
+    ];
+
+    var titles = ['They are not disappointed. That is not a category they have.',
+                  'Early days. Showing up counts more than you think.',
+                  'Real progress, unevenly distributed.',
+                  'Yes — and they would refuse to say it in those words.',
+                  'Yes. Obviously. And they would still want to know what you are avoiding.'];
+
+    return {
+      score: score, vibe: vibe, title: Y2K.pick(titles, score),
+      blurb: 'Level <b>' + level + '</b>, <b>' + Math.round(xp) + ' XP</b>. Now the disclaimer that is also the point: your therapist is not keeping score, ' +
+             'and the wish that they were is one of the more interesting things on this page. Pride is not the currency in that room — attention is.',
+      stats: [
+        { k: 'XP', v: Math.round(xp) },
+        { k: 'level', v: level },
+        { k: 'quests done', v: q.length + '/10' },
+        { k: 'approval trap', v: Math.round(approvalTrap) }
+      ],
+      receipts: receipts,
+      extra: questHTML + '<p class="note" style="margin-top:12px">This is a toy, not an assessment. If something on this page landed harder than expected, ' +
+             'that is worth mentioning in your next session — including the fact that you took a quiz about it.</p>',
+      advice: approvalTrap > 60
+        ? 'Open the next session with: "I realized I try to be good at therapy." It is the single highest-value sentence available to you and it will make the next six weeks better.'
+        : 'Pick one unticked quest and do it this month. Not for XP. There is no XP.'
+    };
+  }
+});
+</script>
+</body>
+</html>

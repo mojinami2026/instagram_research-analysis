@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Could I Afford This Relationship?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>🧾</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+Y2K.app({
+  title: 'Could I Afford This Relationship?',
+  emoji: '🧾💐',
+  file: 'love_forecast',
+  sub: 'A five-year forecast of dates, gifts, trips, weddings, and the quiet monster: <em>lifestyle inflation</em>.',
+  intro: 'Everything is annualized and compounded. Love is free. Its calendar is not.',
+  button: '✧ RUN THE 5-YEAR FORECAST ✧',
+  meterLabel: 'affordability — % of your take-home this relationship does NOT consume',
+  loaderLines: ['IMPORTING BANK STATEMENT (emotionally) ...', 'COMPOUNDING BRUNCH ...', 'PRICING SOMEONE ELSE\'S WEDDING ...'],
+  ticker: 'the relationship is not expensive. the lifestyle attached to it is.',
+
+  fields: [
+    { id: 'income', type: 'num', prefix: '$', default: 4200, min: 0, step: 100,
+      label: 'Your monthly take-home pay', hint: 'After tax. The real number, not the offer letter.' },
+    { id: 'fixed', type: 'num', prefix: '$', default: 2400, min: 0, step: 50,
+      label: 'Your fixed monthly costs', hint: 'Rent, bills, loans, subscriptions you forgot about.' },
+    { id: 'dates', type: 'num', default: 6, min: 0, max: 40, step: 1,
+      label: 'Dates per month', suffix: '/mo' },
+    { id: 'datecost', type: 'num', prefix: '$', default: 65, min: 0, step: 5,
+      label: 'Average cost per date', hint: 'Your share. Include the cab home.' },
+    { id: 'share', type: 'slider', min: 0, max: 100, step: 5, default: 60,
+      label: 'What % of shared costs do you personally pay?', ticks: ['0%', '100%'] },
+    { id: 'trips', type: 'num', default: 2, min: 0, max: 12, step: 1,
+      label: 'Trips together per year' },
+    { id: 'tripcost', type: 'num', prefix: '$', default: 1400, min: 0, step: 100,
+      label: 'Your cost per trip' },
+    { id: 'gifts', type: 'num', prefix: '$', default: 900, min: 0, step: 50,
+      label: 'Gifts + birthdays + anniversaries per year' },
+    { id: 'weddings', type: 'num', default: 3, min: 0, max: 15, step: 1,
+      label: 'Weddings you will attend together per year', hint: 'Their friends count. Especially their friends.' },
+    { id: 'weddingcost', type: 'num', prefix: '$', default: 850, min: 0, step: 50,
+      label: 'Your cost per wedding', hint: 'Flights, hotel, gift, outfit, the bachelor thing.' },
+    { id: 'inflation', type: 'choice', label: 'Their baseline lifestyle vs. yours',
+      hint: 'This is the variable that actually decides the answer.',
+      options: [
+        { v: -0.05, label: '🥫 cheaper than mine' },
+        { v: 0.02, label: '🤝 basically the same' },
+        { v: 0.12, label: '🍸 a step above mine' },
+        { v: 0.28, label: '🛥️ a different tax bracket' }
+      ], default: 0.12 },
+    { id: 'horizon', type: 'choice', label: 'Where is this heading?',
+      options: [
+        { v: 0, label: 'no idea, vibes only' },
+        { v: 1, label: 'moving in eventually' },
+        { v: 2, label: 'engaged within 2 years' },
+        { v: 3, label: 'wedding + kids on the roadmap' }
+      ], default: 1 }
+  ],
+
+  compute: function (v) {
+    var monthlyDates = v.dates * v.datecost * (v.share / 60);
+    var yearlyBase = monthlyDates * 12 + v.trips * v.tripcost + v.gifts + v.weddings * v.weddingcost;
+    var disposable = Math.max(0, (v.income - v.fixed) * 12);
+
+    // lifestyle inflation compounds: everything you do gets more expensive by proximity
+    var infl = v.inflation;
+    var years = [], cum = 0;
+    for (var y = 1; y <= 5; y++) {
+      var lifestyleDrift = disposable * infl * Math.min(y, 4) * 0.55;
+      var milestone = 0;
+      if (v.horizon >= 2 && y === 2) milestone += 6500;     // ring / proposal-adjacent
+      if (v.horizon >= 2 && y === 3) milestone += 18000;    // your share of a wedding
+      if (v.horizon >= 1 && y === 2) milestone += 3500;     // moving in
+      if (v.horizon >= 3 && y === 4) milestone += 14000;    // the roadmap gets literal
+      var cost = yearlyBase * Math.pow(1 + Math.max(infl, 0.03), y - 1) + lifestyleDrift + milestone;
+      cum += cost;
+      years.push({ y: y, cost: cost, cum: cum, milestone: milestone });
+    }
+
+    var yr1 = years[0].cost;
+    var burden = disposable > 0 ? yr1 / disposable : 2;
+    var score = Y2K.clamp((1 - burden) * 100, 2, 98);
+    var vibe = score >= 60 ? 'good' : score >= 32 ? 'mid' : 'bad';
+
+    var rows = years.map(function (r) {
+      return '<tr><td>Year ' + r.y + '</td><td>' + Y2K.money(r.cost) + '</td><td>' + Y2K.money(r.cum) + '</td>' +
+        '<td>' + (r.milestone ? '⚠️ ' + Y2K.money(r.milestone) + ' milestone' : '—') + '</td></tr>';
+    }).join('');
+    var table = '<div class="subhead">📉 the forecast</div><div class="tablewrap"><table class="table"><thead><tr>' +
+      '<th>year</th><th>cost</th><th>cumulative</th><th>events</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<p class="note" style="margin-top:10px">Milestones assume you pay a typical share. If you are planning a wedding, ' +
+      'the number above is the polite version.</p>';
+
+    var titles = [
+      'You cannot afford this at your current pace.',
+      'Affordable only if nothing goes wrong. Something will go wrong.',
+      'Tight but survivable — with visible tradeoffs.',
+      'Comfortably affordable. Carry on.',
+      'This relationship is cheaper than your commute.'
+    ];
+
+    var receipts = [
+      { vibe: burden > .6 ? 'bad' : burden > .35 ? 'mid' : 'good',
+        t: 'Year one costs <b>' + Y2K.money(yr1) + '</b>, which is <b>' + Math.round(burden * 100) +
+           '%</b> of your entire disposable income. Everything else in your life — savings, emergencies, your own hobbies — shares the remainder.' },
+      { vibe: infl > .1 ? 'bad' : 'good',
+        t: 'Lifestyle inflation is running at <b>' + Math.round(infl * 100) + '%</b>. ' +
+           (infl > .1 ? 'This is the line item nobody budgets for and everybody pays. It is not the dates — it is that your normal Tuesday gets more expensive by association.'
+                      : 'Your baselines match. This is the single biggest financial advantage a couple can have and nobody puts it in a wedding speech.') },
+      { vibe: v.share > 70 ? 'bad' : 'mid',
+        t: 'You pay <b>' + v.share + '%</b> of shared costs. ' +
+           (v.share > 70 ? 'Over five years that asymmetry alone is worth ' + Y2K.money(yearlyBase * 5 * ((v.share - 50) / 100)) + '.' : 'Roughly even split. Good.') },
+      { vibe: v.weddings >= 3 ? 'bad' : 'mid',
+        t: v.weddings + ' weddings a year at ' + Y2K.money(v.weddingcost) + ' each = <b>' + Y2K.money(v.weddings * v.weddingcost) +
+          '</b> annually spent celebrating other people\'s decisions.' },
+      { vibe: 'mid',
+        t: 'Five-year total: <b>' + Y2K.money(years[4].cum) + '</b>. Invested at 6% instead, that is roughly <b>' +
+           Y2K.money(years[4].cum * 1.19) + '</b>. We mention this only to be annoying.' }
+    ];
+
+    return {
+      score: score, vibe: vibe, title: Y2K.pick(titles, score),
+      blurb: burden > .6
+        ? 'At this rate the relationship consumes most of your financial slack. That is not a moral failing — it is a pace problem, and pace is negotiable.'
+        : burden > .35
+          ? 'Affordable, but it is the biggest discretionary line in your life. Worth knowing before the milestone years land.'
+          : 'This fits inside your life with room left over. Go be normal about it.',
+      stats: [
+        { k: 'year 1 cost', v: Y2K.money(yr1) },
+        { k: '5-year total', v: Y2K.money(years[4].cum) },
+        { k: 'monthly average', v: Y2K.money(yr1 / 12) },
+        { k: '% of disposable', v: Math.round(burden * 100) + '%' }
+      ],
+      receipts: receipts,
+      extra: table,
+      advice: burden > .5
+        ? 'Two levers, and only two: cut the cost per date (the cheap ones are usually better anyway) or fix the split. Have the split conversation before a milestone year, never during one.'
+        : 'Automate savings first, spend the rest guilt-free. A relationship you have budgeted for is one you can stop worrying about.'
+    };
+  }
+});
+</script>
+</body>
+</html>

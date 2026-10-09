@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Does She Like Me or My Money?</title>
+<link rel="stylesheet" href="assets/y2k.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><text y=%2214%22 font-size=%2214%22>💸</text></svg>">
+</head>
+<body>
+<script src="assets/y2k.js"></script>
+<script>
+(function () {
+  var ROWS = [
+    { d: 'dinner, that place with the tasting menu', s: 240, a: 9 },
+    { d: 'walk in the park + coffee', s: 11, a: 4 },
+    { d: 'concert tickets', s: 180, a: 8 },
+    { d: 'i cooked at my place', s: 22, a: 4 },
+    { d: 'weekend trip', s: 620, a: 10 }
+  ];
+
+  function rowHTML(r, i) {
+    return '<tr>' +
+      '<td><input data-row="' + i + '" data-col="d" value="' + Y2K.esc(r.d) + '" placeholder="what we did"></td>' +
+      '<td style="width:110px"><input data-row="' + i + '" data-col="s" type="number" min="0" step="1" value="' + r.s + '"></td>' +
+      '<td style="width:100px"><input data-row="' + i + '" data-col="a" type="number" min="1" max="10" step="1" value="' + r.a + '"></td>' +
+      '</tr>';
+  }
+
+  function pearson(xs, ys) {
+    var n = xs.length;
+    if (n < 3) return null;
+    var mx = xs.reduce(function (a, b) { return a + b; }, 0) / n;
+    var my = ys.reduce(function (a, b) { return a + b; }, 0) / n;
+    var num = 0, dx = 0, dy = 0;
+    for (var i = 0; i < n; i++) {
+      var a = xs[i] - mx, b = ys[i] - my;
+      num += a * b; dx += a * a; dy += b * b;
+    }
+    if (dx === 0 || dy === 0) return null;
+    return num / Math.sqrt(dx * dy);
+  }
+
+  Y2K.app({
+    title: 'Does She Like Me or My Money?',
+    emoji: '💸💘',
+    file: 'wallet_love',
+    sub: 'Upload your dating history. We run an actual <em>Pearson correlation</em> between what you spent and how warm they got afterward.',
+    intro: 'Yes, this is a real statistic. No, that does not make it a good idea.',
+    button: '✧ RUN THE REGRESSION ✧',
+    meterLabel: 'wallet-dependency index — 0 means they like YOU, 100 means they like your card',
+    loaderLines: ['LOADING receipts.csv ...', 'COMPUTING COVARIANCE OF LOVE AND MONEY ...', 'CHECKING IF THE VIBE SURVIVES A PICNIC ...'],
+    ticker: 'warning: this app has done math',
+
+    fields: [
+      { type: 'html', html:
+        '<div class="field"><span class="field__legend">Your dating history' +
+        '<span class="field__hint">One row per date. Spend = what YOU paid, in dollars. ' +
+        'Affection = how warm/into-it they were in the 48h after, 1–10. Be honest, no one is watching.</span></span>' +
+        '<div class="tablewrap"><table class="table"><thead><tr>' +
+        '<th>the date</th><th>you spent $</th><th>affection 1–10</th>' +
+        '</tr></thead><tbody id="rows">' + ROWS.map(rowHTML).join('') + '</tbody></table></div>' +
+        '<div class="btnrow" style="margin-top:8px">' +
+        '<button type="button" class="btn btn--ghost" id="addrow">+ add another date</button>' +
+        '<button type="button" class="btn btn--ghost" id="delrow">– remove last</button></div></div>' },
+
+      { id: 'broke', type: 'slider', min: 0, max: 10, default: 4,
+        label: 'When you said "I\'m broke this month," how did the energy hold up?',
+        ticks: ['vanished instantly', 'completely unchanged'] },
+      { id: 'init', type: 'slider', min: 0, max: 100, default: 50, step: 5,
+        label: 'What % of plans do THEY initiate?', ticks: ['0% — I do everything', '100% — all them'] },
+      { id: 'cheapfun', type: 'slider', min: 0, max: 10, default: 5,
+        label: 'How good is a free hangout with them? (park, couch, grocery store)',
+        ticks: ['unbearable', 'genuinely the best part'] },
+      { id: 'flags', type: 'checks', label: 'Check anything that has actually happened',
+        options: [
+          { v: 'wishlist', label: 'Has sent you a link to something with no context' },
+          { v: 'venmo', label: 'Has never once paid for anything' },
+          { v: 'upgrade', label: 'Suggests a nicer place when you suggest somewhere cheap' },
+          { v: 'sick', label: 'Showed up for you when you were sick / sad / broke' },
+          { v: 'gift', label: 'Has given you a gift that cost them real money' },
+          { v: 'job', label: 'Asks about your job title more than your day' },
+          { v: 'meet', label: 'Has introduced you to their friends or family' }
+        ] }
+    ],
+
+    collect: function (form) {
+      var rows = [];
+      form.querySelectorAll('#rows tr').forEach(function (tr) {
+        var d = tr.querySelector('[data-col="d"]').value;
+        var s = parseFloat(tr.querySelector('[data-col="s"]').value);
+        var a = parseFloat(tr.querySelector('[data-col="a"]').value);
+        if (!isNaN(s) && !isNaN(a)) rows.push({ d: d, s: s, a: Y2K.clamp(a, 1, 10) });
+      });
+      return { rows: rows };
+    },
+
+    onMount: function (form) {
+      var body = form.querySelector('#rows');
+      form.querySelector('#addrow').addEventListener('click', function () {
+        var i = body.children.length;
+        body.insertAdjacentHTML('beforeend', rowHTML({ d: '', s: 0, a: 5 }, i));
+      });
+      form.querySelector('#delrow').addEventListener('click', function () {
+        if (body.children.length > 2) body.lastElementChild.remove();
+      });
+    },
+
+    compute: function (v) {
+      var rows = v.rows || [];
+      if (rows.length < 3) {
+        return { score: 50, scoreText: '???', vibe: 'mid', title: 'Not enough dates to accuse anyone',
+          blurb: 'We need at least 3 dates with different price tags. Statistics has standards. Go outside.',
+          advice: 'Add a couple more rows — ideally including one cheap date, which is the whole experiment.' };
+      }
+      var spend = rows.map(function (r) { return r.s; });
+      var aff = rows.map(function (r) { return r.a; });
+      var r = pearson(spend, aff);
+      var flags = v.flags || [];
+
+      // cheap-date control group: dates below the median spend
+      var sorted = spend.slice().sort(function (a, b) { return a - b; });
+      var med = sorted[Math.floor(sorted.length / 2)];
+      var cheap = rows.filter(function (x) { return x.s <= med; });
+      var lux = rows.filter(function (x) { return x.s > med; });
+      var avg = function (a) { return a.length ? a.reduce(function (s, x) { return s + x.a; }, 0) / a.length : 0; };
+      var gap = avg(lux) - avg(cheap);
+      var totalSpend = spend.reduce(function (a, b) { return a + b; }, 0);
+      var costPerPoint = totalSpend / Math.max(1, aff.reduce(function (a, b) { return a + b; }, 0));
+
+      var score = 50;
+      if (r !== null) score = 50 + r * 42;               // correlation is the backbone
+      score += gap * 4;                                   // cheap vs expensive affection gap
+      score += (10 - v.broke) * 2.6;                      // did the vibe survive brokeness
+      score += (10 - v.cheapfun) * 1.8;
+      score += (50 - v.init) * 0.14;
+      if (flags.indexOf('wishlist') > -1) score += 5;
+      if (flags.indexOf('venmo') > -1) score += 8;
+      if (flags.indexOf('upgrade') > -1) score += 5;
+      if (flags.indexOf('job') > -1) score += 6;
+      if (flags.indexOf('sick') > -1) score -= 12;
+      if (flags.indexOf('gift') > -1) score -= 7;
+      if (flags.indexOf('meet') > -1) score -= 8;
+      score = Y2K.clamp(score, 2, 98);
+
+      var vibe = score < 38 ? 'good' : score < 62 ? 'mid' : 'bad';
+      var titles = [
+        'They like YOU. Put the credit card down.',
+        'They like you, and they also like nice things. Those are allowed to both be true.',
+        'Inconclusive, which is its own kind of answer.',
+        'The affection has a price tag and the price tag is legible.',
+        'Sir. This is a vending machine relationship.'
+      ];
+      var title = Y2K.pick(titles, score);
+
+      var receipts = [];
+      if (r !== null) {
+        receipts.push({ vibe: r > .5 ? 'bad' : r < .15 ? 'good' : 'mid',
+          t: 'Correlation between your spending and their affection: <b>r = ' + Y2K.round(r, 2) + '</b>. ' +
+             (r > .7 ? 'That is a stronger correlation than most things in social science. Sorry.' :
+              r > .4 ? 'Moderate. Real, but not damning on its own.' :
+              r > .1 ? 'Weak. Basically noise.' :
+              r < -.2 ? 'It is NEGATIVE. They get warmer when you spend less. Marry them.' :
+              'Essentially zero. Your money is not the variable.') });
+      }
+      receipts.push({ vibe: gap > 2 ? 'bad' : gap > 0.8 ? 'mid' : 'good',
+        t: 'Expensive dates average <b>' + Y2K.round(avg(lux), 1) + '/10</b> affection. Cheap dates average <b>' +
+           Y2K.round(avg(cheap), 1) + '/10</b>. Gap: <b>' + Y2K.round(gap, 1) + ' points</b>.' });
+      receipts.push({ vibe: v.broke >= 7 ? 'good' : v.broke <= 3 ? 'bad' : 'mid',
+        t: 'The "I\'m broke this month" stress test scored <b>' + v.broke + '/10</b>. ' +
+           (v.broke >= 7 ? 'This is the single best sign in the whole report.' :
+            v.broke <= 3 ? 'This is the single worst sign in the whole report.' :
+            'Wobbled but survived.') });
+      receipts.push({ vibe: v.cheapfun >= 7 ? 'good' : 'mid',
+        t: 'Free-hangout quality: <b>' + v.cheapfun + '/10</b>. ' +
+           (v.cheapfun >= 7 ? 'If the grocery store is fun, the money was never the point.' :
+            'A relationship that needs a budget to be enjoyable is a subscription.') });
+      if (flags.indexOf('sick') > -1) receipts.push({ vibe: 'good', t: 'They showed up when you were sick, sad, or broke. That cost them time, which is the only currency that counts here.' });
+      if (flags.indexOf('venmo') > -1) receipts.push({ vibe: 'bad', t: 'They have never paid for anything. Not once. Not a coffee.' });
+      if (flags.indexOf('job') > -1) receipts.push({ vibe: 'bad', t: 'More questions about your job title than your day. Noted.' });
+      if (flags.indexOf('meet') > -1) receipts.push({ vibe: 'good', t: 'You have met their people. Nobody introduces an ATM to their mother.' });
+
+      return {
+        score: score, vibe: vibe, title: title,
+        blurb: score < 45
+          ? 'The math does not support your paranoia. You have been buying affection that was already free.'
+          : score < 65
+            ? 'There is a real signal here, but it is not conclusive. Run the cheap-date experiment two more times before you spiral.'
+            : 'Every cheap variable in this report is weak and every expensive one is strong. You already knew. You just wanted a chart.',
+        stats: [
+          { k: 'correlation (r)', v: r === null ? 'n/a' : Y2K.round(r, 2) },
+          { k: 'total spent', v: Y2K.money(totalSpend) },
+          { k: 'cost per affection point', v: Y2K.money(costPerPoint) },
+          { k: 'dates analyzed', v: rows.length }
+        ],
+        receipts: receipts,
+        advice: score < 45
+          ? 'Stop paying for reassurance. Plan something free this week and notice that nothing bad happens.'
+          : 'Run the control experiment: three cheap dates in a row, no explanation, no apology. Correlation is not causation, but a picnic is a pretty cheap way to find out.'
+      };
+    }
+  });
+})();
+</script>
+</body>
+</html>
